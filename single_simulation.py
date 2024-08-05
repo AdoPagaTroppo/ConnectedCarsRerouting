@@ -72,10 +72,14 @@ def compute_reward(ss,passed,edgelist,time,works=None):
     # else:
     fullen = len(edgelist)
     r = [0]*fullen
+    totrepeat = 0
+    for i in ss:
+        if edgelist[i].getID() in passed:
+            totrepeat += 1
     for i in ss:
         edge = edgelist[i]
         edid = edge.getID()
-        r[i] = -traci.edge.getTraveltime(edid)+traci.edge.getLastStepMeanSpeed(edid)-traci.edge.getLastStepVehicleNumber(edid)-(1000000 if edid in works else 0)-(100 if edid in passed else 0)
+        r[i] = -traci.edge.getTraveltime(edid)+traci.edge.getLastStepMeanSpeed(edid)-traci.edge.getLastStepVehicleNumber(edid)-(1000000 if edid in works else 0)-(70/totrepeat if edid in passed else 0)
         # da aggiungere un aggiornamento di costo tenendo conto di comunicazione e interfacciamento con social + fiducia + nnumero di persone che twittano stessa cosa
         # aggiungere costi su incidenti + lavori (simulazioni con stessi lavori e scenari significativi)
     return np.array(r)
