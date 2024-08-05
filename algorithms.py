@@ -1,12 +1,14 @@
 from queue import PriorityQueue
 import math
 
-def connection_exists(node1,node2,node3,graphdict,connections):
-    if node1 is None:
-        return True
+def connection_exists(node1,node2,node3,graphdict,connections,edge=None):
     # print(node1+" "+node2+" "+node3)
     try:
-        edge1 = graphdict[node1][node2]
+        edge1 = None
+        if node1 is None:
+            edge1=(edge,0)
+        else:
+            edge1 = graphdict[node1][node2]
         edge2 = graphdict[node2][node3]
         if edge2[0] in connections[edge1[0]] :
         # or edge1[0] in connections[edge2[0]]:
@@ -15,18 +17,18 @@ def connection_exists(node1,node2,node3,graphdict,connections):
         return False
     return False
 
-def build_path(graphdict,start,goal,type,graphmap=None,forbidnode=None,connections=None):
+def build_path(graphdict,start,goal,type,graphmap=None,forbidnode=None,connections=None,edge=None):
     if type=='bfs':
-        return bfs(graphdict,start,goal,connections)
+        return bfs(graphdict,start,goal,connections,edge)
     elif type=='dijkstra':
-        return dijkstra(graphdict,start,goal,forbidnode,connections)
+        return dijkstra(graphdict,start,goal,forbidnode,connections,edge)
     elif type=='greedybfs':
-        return greedybfs(graphdict,start,goal,graphmap,connections)
+        return greedybfs(graphdict,start,goal,graphmap,connections,edge)
     elif type=='astar':
-        return astar(graphdict,start,goal,graphmap,forbidnode,connections)
+        return astar(graphdict,start,goal,graphmap,forbidnode,connections,edge)
     return None
 
-def bfs(graphdict,start,goal,connections):
+def bfs(graphdict,start,goal,connections,edge):
     frontier = []
     frontier.append(start)
     came_from = {}
@@ -39,7 +41,7 @@ def bfs(graphdict,start,goal,connections):
             goal_found = True
             break
         for dests in graphdict[current]:
-            if dests not in came_from and connection_exists(came_from[current],current,dests,graphdict,connections):
+            if dests not in came_from and connection_exists(came_from[current],current,dests,graphdict,connections,edge=edge):
                 frontier.append(dests)
                 i += 1
                 came_from[dests] = current
@@ -57,7 +59,7 @@ def bfs(graphdict,start,goal,connections):
     else:
         return None
 
-def dijkstra(graphdict,start,goal,forbidnode=None,connections=None):
+def dijkstra(graphdict,start,goal,forbidnode=None,connections=None,edge=None):
     frontier = PriorityQueue()
     frontier.put(start,0)
     came_from = {}
@@ -74,7 +76,7 @@ def dijkstra(graphdict,start,goal,forbidnode=None,connections=None):
         for dests in graphdict[current]:
             if (dests!=forbidnode and current == start) or current!=start:
                 new_cost = float(cost_so_far[current])+float(graphdict[current][dests][1])
-                if (dests not in cost_so_far or new_cost<cost_so_far[dests]) and connection_exists(came_from[current],current,dests,graphdict,connections):
+                if (dests not in cost_so_far or new_cost<cost_so_far[dests]) and connection_exists(came_from[current],current,dests,graphdict,connections,edge=edge):
                 # if (dests not in cost_so_far or new_cost<cost_so_far[dests]):
                     frontier.put(dests,new_cost)
                     i += 1
@@ -102,7 +104,7 @@ def heuristic(n0,n1,graphmap):
     hvalue = math.sqrt((n0x-n1x)**2+(n0y-n1y)**2)
     return hvalue
 
-def greedybfs(graphdict,start,goal,graphmap,connections):
+def greedybfs(graphdict,start,goal,graphmap,connections,edge=None):
     frontier = PriorityQueue()
     frontier.put(start,0)
     came_from = {}
@@ -115,7 +117,7 @@ def greedybfs(graphdict,start,goal,graphmap,connections):
             goal_found = True
             break
         for dests in graphdict[current]:
-            if dests not in came_from and connection_exists(came_from[current],current,dests,graphdict,connections):
+            if dests not in came_from and connection_exists(came_from[current],current,dests,graphdict,connections,edge=edge):
                 frontier.put(dests,heuristic(dests,goal,graphmap))
                 i += 1
                 came_from[dests] = current
@@ -133,7 +135,7 @@ def greedybfs(graphdict,start,goal,graphmap,connections):
     else:
         return None
 
-def astar(graphdict,start,goal,graphmap,forbidnode=None,connections=None):
+def astar(graphdict,start,goal,graphmap,forbidnode=None,connections=None,edge=None):
     frontier = PriorityQueue()
     frontier.put(start,0)
     came_from = {}
@@ -150,7 +152,7 @@ def astar(graphdict,start,goal,graphmap,forbidnode=None,connections=None):
         for dests in graphdict[current]:
             if (dests!=forbidnode and current == start) or current!=start:
                 new_cost = float(cost_so_far[current])+float(graphdict[current][dests][1])
-                if (dests not in cost_so_far or new_cost<cost_so_far[dests]) and connection_exists(came_from[current],current,dests,graphdict,connections):
+                if (dests not in cost_so_far or new_cost<cost_so_far[dests]) and connection_exists(came_from[current],current,dests,graphdict,connections,edge=edge):
                     frontier.put(dests,new_cost+heuristic(dests,goal,graphmap))
                     i += 1
                     came_from[dests] = current

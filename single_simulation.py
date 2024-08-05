@@ -75,7 +75,7 @@ def compute_reward(ss,passed,edgelist,time,works=None):
     for i in ss:
         edge = edgelist[i]
         edid = edge.getID()
-        r[i] = -traci.edge.getAdaptedTraveltime(edid,time)+traci.edge.getLastStepMeanSpeed(edid)-traci.edge.getLastStepVehicleNumber(edid)-(1000000 if edid in works else 0)-(1000000 if edid in passed else 0)
+        r[i] = -traci.edge.getTraveltime(edid)+traci.edge.getLastStepMeanSpeed(edid)-traci.edge.getLastStepVehicleNumber(edid)-(1000000 if edid in works else 0)-(100 if edid in passed else 0)
         # da aggiungere un aggiornamento di costo tenendo conto di comunicazione e interfacciamento con social + fiducia + nnumero di persone che twittano stessa cosa
         # aggiungere costi su incidenti + lavori (simulazioni con stessi lavori e scenari significativi)
     return np.array(r)
@@ -180,6 +180,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
         traci.route.add(agrouteid,(start_edge,start_edge))
         traci.vehicle.add(agentid,agrouteid,'Car_'+str(destt[1]),str(i*10))
         traci.vehicle.setSpeed(agentid,-1)
+        print(agentid+" loaded")
     print('loaded vehicles')
     totarrived = 0
     rerouting_occurred = {}
@@ -253,12 +254,14 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                             # print('calculating')
                             ss = state_space(statecars,T_HORIZON,net,connections,graphdict,edgelist,end_edge[vehicle])
                             ss_edges = conv_ss2edges(ss,edgelist)
-                            # print(ss_edges)
+                            print(ss_edges)
                             r = compute_reward(ss,passed[vehicle],edgelist,scounter+1,works)
-                            # print([x for x in r if x!=0])
-                            # print(ss)
-                            behav = online_create_behaviours(edgelist,targets,NUM_ALGS,end_edge[vehicle],graphdict,connections,vn,graphmap)
-                            new_state = agents[vehicle].receding_horizon_DM(statecars,T_HORIZON,ss,r,ONLINE,behav)
+                            print([x for x in r if x!=0])
+                            print(ss)
+                            behav = None
+                            if ONLINE:
+                                behav = online_create_behaviours(edgelist,targets,NUM_ALGS,end_edge[vehicle],graphdict,connections,vn,graphmap)
+                            new_state = agents[vehicle].receding_horizon_DM(statecars,T_HORIZON,ss,r,ONLINE,behav,edgelist)
                             prox_edge = edgelist[new_state]
                         elif len(vn)==2:
                             # print('immediate next edge')

@@ -8,13 +8,13 @@ CREATE_BEHAVIOURS = False
 RUN_SIMULATION = True
 NUM_ALGS = 4
 IMG_FOLDER = 'UnisaScenario_12h_noincident/'
-NUMBER_OF_CARS = 100
+NUMBER_OF_CARS = 1
 NUM_AGENTS = 1
-USE_NUM_AGENTS = False
+USE_NUM_AGENTS = True
 PERC_AGENTS = 0.3
-TIME_HORIZON = 4
+TIME_HORIZON = 5 # keep around 5
 SAVE_IMG = False
-SAVE_FILE = True
+SAVE_FILE = False
 
 if CREATE_BEHAVIOURS:
     create_behaviours(NUM_ALGS)
@@ -33,7 +33,7 @@ if RUN_SIMULATION:
     if numberofsim<2:
         if not USE_NUM_AGENTS:
             NUM_AGENTS = PERC_AGENTS*NUMBER_OF_CARS
-        retval,agents,arrived = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.1,True,True,12,PERC_AGENTS,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=True)
+        retval,agents,arrived = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.1,True,True,12,PERC_AGENTS,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=False)
         vehicle_speeds = []
         vehicle_fuelconsumptions = []
         vehicle_waitingtimes = []

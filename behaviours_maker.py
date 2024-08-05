@@ -92,10 +92,23 @@ def create_behaviours(num_algs):
         for j in range(num_algs):
             for e in edge_list: 
                 route = []
+                # if j == 0:
+                #     route = traci.simulation.findRoute(e.getID(), t).edges
+                # else:
+                #     route = traci.simulation.findRoute(e.getID(), t, "routerByDistance").edges
                 if j == 0:
-                    route = traci.simulation.findRoute(e.getID(), t).edges
-                else:
+                        route = traci.simulation.findRoute(e.getID(), t).edges
+                elif j == 1:
                     route = traci.simulation.findRoute(e.getID(), t, "routerByDistance").edges
+                else:
+                    route = []
+                    route.append(e.getID())
+                    ext = build_path(graphdict,e.getToNode().getID(),endnode,index2alg(j),graphmap=graphmap,connections=connections,edge=e.getID())
+                    if ext is None:
+                        route = None
+                    else:
+                        if 'SUCC' not in ext:
+                            route.extend(ext)
                 pmf = [0]*((len(edge_list)))
                 
                 if route is None or len(route) ==0 : # edges are not connected 
@@ -105,6 +118,7 @@ def create_behaviours(num_algs):
                 elif(len(route) == 1):
                     e_prime = e.getID()
                     pmf[edge_dict[e_prime]] = 1.0
+                    print(str(route)+' from edge '+str(e.getID()))
                     # prob = 0.95 
                     
                     # pmf[edge_dict[e_prime]] = 0.95  
