@@ -227,70 +227,81 @@ def online_make_behaviours(num_algs,target_edge,state_space,edgelist,graphdict,c
     print("Behaviors generated!")
     return behaviors
     
-def online_create_behaviours(edge_list,targets,num_algs,target_edge,graphdict,connections,ss_edges,graphmap):
+def online_create_behaviours(edge_list,targets,num_algs,target_edge,graphdict,connections,ss_edges,graphmap,net,behaviors,behavior_created):
     #Dictionary of list IDs
     edge_dict = {}
 
     for e in edge_list:
         edge_dict[e.getID()] = edge_list.index(e)
 
-    behaviors = np.zeros((len(targets)*num_algs, len(edge_list), len(edge_list)))
+    # behaviors = np.zeros((len(targets)*num_algs, len(edge_list), len(edge_list)))
 
-    i=0
-    for t in targets.values():
+    # i=0
+    i = list(targets.values()).index(target_edge)*num_algs
+    # for t in targets.values():
+        # pmfs = np.zeros((len(edge_list), len(edge_list)))
+        # pmfs = behaviors[i]
+    endnode = net.getEdge(target_edge).getToNode().getID()
+    for j in range(num_algs):
         pmfs = np.zeros((len(edge_list), len(edge_list)))
-        for j in range(num_algs):
-            if t == target_edge:
-                for e in ss_edges:
+        for e in ss_edges:
+            if (e.getID(),target_edge) not in behavior_created:
+                route = []
+                if j == 0:
+                    route = traci.simulation.findRoute(e.getID(), target_edge).edges
+                elif j == 1:
+                    route = traci.simulation.findRoute(e.getID(), target_edge, "routerByDistance").edges
+                else:
                     route = []
-                    if j == 0:
-                        route = traci.simulation.findRoute(e.getID(), t).edges
-                    elif j == 1:
-                        route = traci.simulation.findRoute(e.getID(), t, "routerByDistance").edges
+                    route.append(e.getID())
+                    ext = build_path(graphdict,e.getToNode().getID(),endnode,index2alg(j),graphmap=graphmap,connections=connections,edge=e.getID())
+                    if ext is None:
+                        route = None
                     else:
-                        route = build_path(graphdict,ss_edges[0].getFromNode().getID(),edge_list[edge_dict[target_edge]].getToNode().getID(),index2alg(j),graphmap=graphmap,connections=connections)
-                    pmf = [0]*((len(edge_list)))
+                        if 'SUCC' not in ext:
+                            route.extend(ext)
+                pmf = [0]*((len(edge_list)))
+                if route is None or len(route) ==0 : # edges are not connected 
+                    for x in range(len(pmf)):
+                        pmf[x] = 0
+                elif(len(route) == 1):
+                    e_prime = e.getID()
+                    pmf[edge_dict[e_prime]] = 1.0
+                else:
                     
-                    if route is None or len(route) ==0 : # edges are not connected 
-                        for x in range(len(pmf)):
-                            pmf[x] = 0
-                    
-                    elif(len(route) == 1):
-                        e_prime = e.getID()
-                        pmf[edge_dict[e_prime]] = 1.0
-                        # prob = 0.95 
+                    e_prime = route[1] # e' is the edge just after e 
+
+                    prob = 0.95 
+                    pmf[edge_dict[e_prime]] = prob
+
+                    valid_edges = valid_neighbors(e,graphdict,connections,target_edge)
+                    # valid_lengths = valid_neighbors_lengths(valid_edges,t)
+                    # totlength = sum(valid_lengths.values())
+                    for v in valid_edges:
+                        if(edge_dict[v.getID()]!= edge_dict[e_prime]):
+                            pmf[edge_dict[v.getID()]] = (1-prob) / len(valid_edges)
+                        # pmf[edge_dict[v.getID()]] = (totlength-valid_lengths[v])/totlength if totlength!=valid_lengths[v] else 1.0
+                        # print(str(v)+" "+str(pmf[edge_dict[v.getID()]]))
+
+                pmf = np.array(pmf)
                         
-                        # pmf[edge_dict[e_prime]] = 0.95  
-                        # valid_edges = valid_neighbors(e,graphdict,connections)
-                            
-                        # for v in valid_edges:
-                        #     if(edge_dict[v.getID()]!= edge_dict[e_prime]):
-                        #         pmf[edge_dict[v.getID()]] = (1-prob) / len(valid_edges)
-                    else:
+                if np.sum(pmf) !=0:
+                    pmf = pmf/np.sum(pmf)
                         
-                        e_prime = route[1] # e' is the edge just after e 
-
-                        prob = 0.97 
-                        pmf[edge_dict[e_prime]] = prob
-
-                        valid_edges = valid_neighbors(e,graphdict,connections,t)
-                        # valid_lengths = valid_neighbors_lengths(valid_edges,t)
-                        # totlength = sum(valid_lengths.values())
-                        for v in valid_edges:
-                            if(edge_dict[v.getID()]!= edge_dict[e_prime]):
-                                pmf[edge_dict[v.getID()]] = (1-prob) / len(valid_edges)
-                            # pmf[edge_dict[v.getID()]] = (totlength-valid_lengths[v])/totlength if totlength!=valid_lengths[v] else 1.0
-                            # print(str(v)+" "+str(pmf[edge_dict[v.getID()]]))
-
-                    pmf = np.array(pmf)
-                            
-                    if np.sum(pmf) !=0:
-                        pmf = pmf/np.sum(pmf)
-                            
-                    pmfs[edge_dict[e.getID()]] = pmf
-                                
-            behaviors[i] = pmfs
-
-
-            i+=1
+                pmfs[edge_dict[e.getID()]] = pmf
+        
+        for k in range(len(pmfs)):
+            behaviors[i,k] = behaviors[i,k]+pmfs[k]
+            if np.sum(behaviors[i,k])>1:
+                print('WARNING HERE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')                
+        print('updated target '+str(target_edge)+' alg '+index2alg(j))
+        # okay = True
+        # # for x in (behaviors[i]+pmfs):
+        # #     if np.sum(x)>1:
+        # #         okay = False
+        # if okay:
+        #     behaviors[i] = behaviors[i]+pmfs
+        #     print(behaviors.shape)
+        #     print(['AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'+str(x) for x in behaviors[i] if np.sum(x,0)>1])
+        i+=1
     return behaviors

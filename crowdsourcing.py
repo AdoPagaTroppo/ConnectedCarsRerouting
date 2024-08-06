@@ -45,8 +45,8 @@ class Crowdsourcing():
         ### Decision-making loop
         # Arguments: state, time horizon, state space, reward array (actually a cost)
         xInd = np.where(stateSpace == state)[0][0] #Index of the state in the reduced state space
-        # if online and behaviours is not None:
-        #     behaviors = behaviours
+        if online and behaviours is not None:
+            behaviors = behaviours
         # if online and behaviours is not None:
         #     self.edgeNum = behaviours.shape[1]
         #     self.targetNum = behaviours.shape[0]
@@ -85,9 +85,9 @@ class Crowdsourcing():
         timeHor.reverse()
         # rBar = r
         for t in timeHor:
-            print('time '+str(t))
+            # print('time '+str(t))
             rBar = r + rHat #Adapt reward
-            print([x for x in rBar if x!=0])
+            # print([x for x in rBar if x!=0])
             # for i in range(self.targetNum):
             for i in range(self.numalgs):
                 for j in range(dim):
@@ -105,11 +105,11 @@ class Crowdsourcing():
                 #     rHat[i] = -min(weights[:,i]) #Calculate rHat
                 # else:
                     rHat[stateSpace[i]] = -min(weights[:,i]) #Calculate rHat
-                    if edgelist is not None:
-                        print(edgelist[stateSpace[i]].getID())
-                    print(rHat[stateSpace[i]])
-                    print('weights')
-                    print([x for x in weights[:,i] if x!=0])
+                    # if edgelist is not None:
+                    #     print(edgelist[stateSpace[i]].getID())
+                    # print(rHat[stateSpace[i]])
+                    # print('weights')
+                    # print([x for x in weights[:,i] if x!=0])
         # indMin = np.argmin(weights[self.targetIndex:self.targetIndex+self.numalgs,xInd])
         # print('vehicle to '+str(self.targetIndex))
         # print('rHat')
