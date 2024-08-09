@@ -3,16 +3,17 @@ from behaviours_maker import create_behaviours
 import traci
 import matplotlib.pyplot as plt
 import numpy as np
+from mapdata import MapData
 
 CREATE_BEHAVIOURS = False
 RUN_SIMULATION = True
 NUM_ALGS = 4
 IMG_FOLDER = 'UnisaScenario_12h_noincident/'
 NUMBER_OF_CARS = 100
-NUM_AGENTS = 10
-USE_NUM_AGENTS = False
+NUM_AGENTS = 12
+USE_NUM_AGENTS = True
 PERC_AGENTS = 0.3
-TIME_HORIZON = 4 # keep around 5
+TIME_HORIZON = 5 # keep around 5
 SAVE_IMG = False
 SAVE_FILE = False
 
@@ -30,10 +31,11 @@ if RUN_SIMULATION:
     co2em = []
     noise = []
     numberofsim = 1
+    mapdata = MapData()
     if numberofsim<2:
         if not USE_NUM_AGENTS:
             NUM_AGENTS = PERC_AGENTS*NUMBER_OF_CARS
-        retval,agents,arrived = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.1,True,True,12,PERC_AGENTS,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=True)
+        retval,agents,arrived = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.1,True,True,12,PERC_AGENTS,mapdata,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=True,CONSIDER_WORKS=True)
         vehicle_speeds = []
         vehicle_fuelconsumptions = []
         vehicle_waitingtimes = []
@@ -59,7 +61,7 @@ if RUN_SIMULATION:
             ssize = 0.1
             if i == 0:
                 ssize = 1.0
-            retval,agents,arrived = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,ssize,True,True,12,0.1*(i),False,i,NUM_ALGS=NUM_ALGS,ONLINE=True)
+            retval,agents,arrived = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,ssize,True,True,12,0.1*(i),mapdata,False,i,NUM_ALGS=NUM_ALGS,ONLINE=True)
             vehicle_speeds = []
             vehicle_fuelconsumptions = []
             vehicle_waitingtimes = []

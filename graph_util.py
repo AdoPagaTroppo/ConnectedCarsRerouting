@@ -23,5 +23,14 @@ def build_graph():
         if key not in connections:
             connections[key] = []
         val = c[1]
-        connections[key].append(val)
-    return graphdict, graphmap, net, connections
+        if net.getEdge(val).allows('passenger'):
+            connections[key].append(val)
+    edgegraph = {}
+    edges = net.getEdges()
+    for e in edges:
+        edid = e.getID()
+        if net.getEdge(edid).allows('passenger'):
+            edgegraph[edid] = []
+            if edid in connections:
+                edgegraph[edid].extend(connections[edid])
+    return graphdict, graphmap, net, connections, edgegraph

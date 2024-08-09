@@ -17,7 +17,11 @@ def connection_exists(node1,node2,node3,graphdict,connections,edge=None):
         return False
     return False
 
-def build_path(graphdict,start,goal,type,graphmap=None,forbidnode=None,connections=None,edge=None):
+def build_path(mapdata,start,goal,type,forbidnode=None,edge=None):
+    graphdict = mapdata.graphdict
+    connections = mapdata.connections
+    graphmap = mapdata.graphmap
+    edgegraph = mapdata.edgegraph
     if type=='bfs':
         return bfs(graphdict,start,goal,connections,edge)
     elif type=='dijkstra':
@@ -26,29 +30,32 @@ def build_path(graphdict,start,goal,type,graphmap=None,forbidnode=None,connectio
         return greedybfs(graphdict,start,goal,graphmap,connections,edge)
     elif type=='astar':
         return astar(graphdict,start,goal,graphmap,forbidnode,connections,edge)
+    elif type=='e_bfs':
+        return edge_bfs(start,goal,edgegraph,forbidnode)
+    elif type=='e_greedybfs':
+        return edge_greedybfs(mapdata,start,goal,forbidnode)
     return None
 
 def bfs(graphdict,start,goal,connections,edge):
-    frontier = []
-    frontier.append(start)
+    if start == goal:
+        return ['SUCC']
+    frontier = PriorityQueue()
+    frontier.put(start)
     came_from = {}
     came_from[start] = None
-    i = 0
     goal_found = False
-    while len(frontier)>0:
-        current = frontier.pop(0)
+    while not frontier.empty():
+        current = frontier.get()
         if current == goal:
             goal_found = True
             break
         for dests in graphdict[current]:
             if dests not in came_from and connection_exists(came_from[current],current,dests,graphdict,connections,edge=edge):
-                frontier.append(dests)
-                i += 1
+                frontier.put(dests)
                 came_from[dests] = current
     if goal_found:
+        print('I actually found the goal')
         path = []
-        if came_from[goal] is None:
-            return ['SUCC']
         path.append(graphdict[came_from[goal]][goal][0])
         current = came_from[goal]
         while current!=start:
@@ -105,11 +112,12 @@ def heuristic(n0,n1,graphmap):
     return hvalue
 
 def greedybfs(graphdict,start,goal,graphmap,connections,edge=None):
+    if start == goal:
+        return ['SUCC']
     frontier = PriorityQueue()
     frontier.put(start,0)
     came_from = {}
     came_from[start] = None
-    i = 0
     goal_found = False
     while not frontier.empty():
         current = frontier.get()
@@ -119,7 +127,6 @@ def greedybfs(graphdict,start,goal,graphmap,connections,edge=None):
         for dests in graphdict[current]:
             if dests not in came_from and connection_exists(came_from[current],current,dests,graphdict,connections,edge=edge):
                 frontier.put(dests,heuristic(dests,goal,graphmap))
-                i += 1
                 came_from[dests] = current
     if goal_found:
         path = []
@@ -168,6 +175,67 @@ def astar(graphdict,start,goal,graphmap,forbidnode=None,connections=None,edge=No
         while current!=start:
             path.append(graphdict[came_from[current]][current][0])
             current = came_from[current]
+        path.reverse()
+        return path
+    else:
+        return None
+
+def edge_bfs(start,goal,edgegraph,forbidnode=None):
+    if start == goal:
+        return ['SUCC']
+    frontier = PriorityQueue()
+    frontier.put(start)
+    came_from = {}
+    came_from[start] = None
+    goal_found = False
+    while not frontier.empty():
+        current = frontier.get()
+        if current == goal:
+            goal_found = True
+            break
+        for dests in edgegraph[current]:
+            if dests not in came_from and dests!=forbidnode:
+                frontier.put(dests)
+                came_from[dests] = current
+    if goal_found:
+        path = []
+        current = goal
+        while current!=start:
+            path.append(current)
+            current = came_from[current]
+        path.append(start)
+        path.reverse()
+        return path
+    else:
+        return None
+    
+def edge_greedybfs(mapdata,start,goal,forbidnode=None):
+    edgegraph = mapdata.edgegraph
+    graphmap = mapdata.graphmap
+    net = mapdata.net
+    if start == goal:
+        return ['SUCC']
+    frontier = PriorityQueue()
+    frontier.put(start,0)
+    came_from = {}
+    came_from[start] = None
+    goal_found = False
+    while not frontier.empty():
+        current = frontier.get()
+        if current == goal:
+            goal_found = True
+            break
+        for dests in edgegraph[current]:
+            if dests not in came_from and dests != forbidnode:
+                frontier.put(dests,heuristic(net.getEdge(dests).getToNode().getID(),net.getEdge(goal).getToNode().getID(),graphmap))
+                came_from[dests] = current
+    if goal_found:
+        path = []
+        current = goal
+        while current!=start:
+            path.append(current)
+            current = came_from[current]
+        path.append(start)
         path.reverse()
         return path
     else:

@@ -48,14 +48,19 @@ def spawnBus(busdata,currenttime):
             spawnedBuss.append(vbusid)
     return spawned,spawnedBuss
 
-def spawnUncontrolledCars(num_uncontrolled,sources,destinations,target_weights,graphdict,net,graphmap,connections):
+def spawnUncontrolledCars(num_uncontrolled,mapdata):
     # paths = {}
+    destinations = mapdata.destinations
+    sources = mapdata.sources
+    target_weights = mapdata.target_weights
+    
     vehs = {}
     i = 0
     j = 0
     for c in range(int(num_uncontrolled)):
         source = random.choices(sources)[0]
         dest = random.choices(destinations,target_weights)[0]
+        # dest = destinations[0 if j%2 == 0 else 2]
         id = 'veh'+str(c+1)+'_'+str(dest[1])
         routeid = 'route'+str(c+1)
         # pathbuilt=build_path(graphdict,source,net.getEdge(dest[0]).getToNode().getID(),'dijkstra',graphmap,connections=connections)
@@ -78,13 +83,21 @@ def spawnUncontrolledCars(num_uncontrolled,sources,destinations,target_weights,g
     #     j += 1
     return vehs
 
-def spawnControlledCars(NUM_AGENTS,destinations,targets,target_weights,NUM_ALGS,vehs):
+def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs):
+    destinations = mapdata.destinations
+    targets = mapdata.targets
+    target_weights = mapdata.target_weights
+    
     start_edge = '-579690548#1'
+    # start_edge = '-776505003#4'
+    # start_edge = '1244093044#0'
+    # start_edge = '392822665#1'
     end_edge = {}
     agents = {}
     for i in range(int(NUM_AGENTS)):
         # destt = random.choices(destinations,target_weights)[0]
         destt = destinations[i%len(destinations)]
+        # destt = destinations[0]
         dest = destt[0]
         agentid = 'agent'+str(i)+'_'+str(destt[1])
         agrouteid = agentid+'_route'

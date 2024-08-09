@@ -238,11 +238,11 @@
                 <entry color="204,204,204" name="no TAZ"/>
             </colorScheme>
             <colorScheme name="by param (numerical, streetwise)" interpolated="1">
+                <entry color="30,22,22" threshold="0.00"/>
                 <entry color="blue" threshold="255.00"/>
                 <entry color="green" threshold="65280.00"/>
                 <entry color="cyan" threshold="65535.00"/>
                 <entry color="red" threshold="16711680.00"/>
-                <entry color="orange" threshold="16711935.00"/>
                 <entry color="magenta" threshold="16711935.00"/>
                 <entry color="yellow" threshold="16776960.00"/>
                 <entry color="black" name="missing data"/>

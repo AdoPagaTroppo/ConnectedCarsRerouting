@@ -85,9 +85,9 @@ class Crowdsourcing():
         timeHor.reverse()
         # rBar = r
         for t in timeHor:
-            # print('time '+str(t))
+            print('time '+str(t))
             rBar = r + rHat #Adapt reward
-            # print([x for x in rBar if x!=0])
+            print([x for x in rBar if x!=0])
             # for i in range(self.targetNum):
             for i in range(self.numalgs):
                 for j in range(dim):
@@ -105,17 +105,20 @@ class Crowdsourcing():
                 #     rHat[i] = -min(weights[:,i]) #Calculate rHat
                 # else:
                     rHat[stateSpace[i]] = -min(weights[:,i]) #Calculate rHat
-                    # if edgelist is not None:
-                    #     print(edgelist[stateSpace[i]].getID())
-                    # print(rHat[stateSpace[i]])
-                    # print('weights')
-                    # print([x for x in weights[:,i] if x!=0])
+                    if edgelist is not None:
+                        print(edgelist[stateSpace[i]].getID())
+                    print('rHat')
+                    print([x for x in rHat if x!=0])
+                    print('weights')
+                    print([x for x in weights[:,i] if x!=0])
         # indMin = np.argmin(weights[self.targetIndex:self.targetIndex+self.numalgs,xInd])
         # print('vehicle to '+str(self.targetIndex))
         # print('rHat')
         # print([x for x in rHat if x!=0])
         indMin = np.argmin(weights[:,xInd])
-        # print('index is '+str(indMin)+' of item '+str(rHat[indMin])+' obtained through alg '+str(index2alg(indMin)))
+        print('index is '+str(indMin)+','+str(xInd)+' of item '+str(rHat[indMin])+' obtained through alg '+str(index2alg(indMin)))
+        # print('edge is '+str(edgelist[stateSpace[xInd]]))
         pf = sources[indMin, xInd] #Pick pf
+        print([x for x in pf if x!=0])
         # pf = sources[self.targetIndex, xInd] #Pick pf
         return(np.random.choice(range(self.edgeNum), p = pf)) #Sample pf and return resulting state

@@ -13,3 +13,4 @@ class VehicleData:
         self.co2emission = 0
         self.influenced = 0
         self.currentroad = ''
+        self.weightened = {}

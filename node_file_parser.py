@@ -14,6 +14,16 @@ def parse_file_for_nodes(filename):
         elif pieces[0]=='start':
             sources.append(pieces[1])
     return targets,sources
+
+def parse_file_for_work(filename):
+    works = {}
+    dataread = []
+    with open(filename,'r') as rf:
+        dataread = rf.readlines()
+    for el in dataread:
+        el = el.replace('\n','')
+        works[el] = 0
+    return works
     
 # targets, sources = parse_file_for_nodes('config.txt')
 # print("Targets:")
