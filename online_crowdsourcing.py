@@ -4,24 +4,19 @@ import matplotlib.pyplot as plt
 import numpy as np  # for array management
 from behaviours_maker import index2alg
 
-# UNISA NET ------------
-behaviors_name = r"test_behaviours.npy"
 
-# ###This is where the behaviors are loaded
-behaviors = np.load(behaviors_name) 
-
-class Crowdsourcing():
-    def __init__(self, agent, numalgs):
+class OnlineCrowdsourcing():
+    def __init__(self, agent, numalgs,mapdata):
         #the sources are a global variable
         # self.behaviors = np.load("test_behaviours.npy") 
-        self.edgeNum = behaviors.shape[1]
-        self.targetNum = behaviors.shape[0]
+        self.edgeNum = len(mapdata.edgelist)
+        self.targetNum = len(mapdata.targets)*numalgs
         self.targetIndex = agent.id_goal
         # print(self.edgeNum)
         # print(self.targetNum)
         # print(self.targetIndex)
         # self.PMF_target = self.behaviors[self.targetIndex if self.targetIndex<12 else 0]
-        self.PMF_target = behaviors[self.targetIndex]
+        self.PMF_target = []
         self.numalgs = numalgs
         # print(self.PMF_target)
 
@@ -45,8 +40,7 @@ class Crowdsourcing():
         ### Decision-making loop
         # Arguments: state, time horizon, state space, reward array (actually a cost)
         xInd = np.where(stateSpace == state)[0][0] #Index of the state in the reduced state space
-        if online and behaviours is not None:
-            behaviors = behaviours
+        behaviors = behaviours
         # if online and behaviours is not None:
         #     self.edgeNum = behaviours.shape[1]
         #     self.targetNum = behaviours.shape[0]

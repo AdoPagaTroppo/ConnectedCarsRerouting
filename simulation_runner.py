@@ -35,7 +35,7 @@ if RUN_SIMULATION:
     if numberofsim<2:
         if not USE_NUM_AGENTS:
             NUM_AGENTS = PERC_AGENTS*NUMBER_OF_CARS
-        retval,agents,arrived = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.1,True,True,12,PERC_AGENTS,mapdata,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=True,CONSIDER_WORKS=True)
+        retval,agents,arrived = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.1,True,True,12,PERC_AGENTS,mapdata,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=True,CONSIDER_WORKS=False)
         vehicle_speeds = []
         vehicle_fuelconsumptions = []
         vehicle_waitingtimes = []

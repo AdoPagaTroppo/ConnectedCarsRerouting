@@ -10,7 +10,6 @@ import random
 import randomTrips as rt
 from graph_util import build_graph
 from agent import Agent
-from crowdsourcing import Crowdsourcing
 import numpy as np
 from bus_parser import bus_parser
 from behaviours_maker import valid_neighbors
@@ -79,7 +78,7 @@ def compute_reward(ss,passed,mapdata,target_edge,works,vehicle):
             tail_in_wip = -worksweight*veh_num/vehicle.weightened[edid]
         r[i] = traveltime+veh_num+road_in_wip+road_repeat+tail_in_wip-pathlen
         # r[i] = -pathlen-(1000000 if edid in works else 0)-(70/totrepeat+100*(passed[edid]-1) if edid in passed else 0)
-        print('edge '+str(edid)+' reward '+str(r[i]))
+        # print('edge '+str(edid)+' reward '+str(r[i]))
         # da aggiungere un aggiornamento di costo tenendo conto di comunicazione e interfacciamento con social + fiducia + nnumero di persone che twittano stessa cosa
         # aggiungere costi su incidenti + lavori (simulazioni con stessi lavori e scenari significativi)
     return np.array(r)
@@ -187,13 +186,13 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         prox_edge = end_edge[vehicle]
                     else:
                         if len(vn)>2:
+                            # print(vehicle)
                             ss = state_space(statecars,T_HORIZON,mapdata,end_edge[vehicle])
                             # print(ss)
                             # print(statecars)
                             ss_edges = conv_ss2edges(ss,edgelist)
                             # print(ss_edges)
                             r = compute_reward(ss,passed[vehicle],mapdata,end_edge[vehicle],works,vehs[vehicle])
-                            print(vehicle)
                             if ONLINE and (currentid,end_edge[vehicle]) not in behaviour_created:
                                 behaviour_db = online_create_behaviours(mapdata,NUM_ALGS,end_edge[vehicle],ss_edges,behaviour_db,behaviour_created)
                                 for v in ss_edges:
@@ -201,7 +200,12 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                     # print('added '+str(v.getID())+' towards '+str(end_edge[vehicle]))
                             # print([x for x in behaviour_db[agents[vehicle].targetIndex,edgelist.index(net.getEdge(currentid))] if x!=0])
                             if colorreward:
-                                colorMap(r,mapdata,rewards4colors,end_edge[vehicle])
+                                # colorMap(r,mapdata,rewards4colors,end_edge[vehicle])
+                                for e in edgelist:
+                                    if e not in ss_edges:
+                                        traci.edge.setParameter(e.getID(),'color',0)
+                                    else:
+                                        traci.edge.setParameter(e.getID(),'color',1000000)
                             new_state = agents[vehicle].receding_horizon_DM(statecars,T_HORIZON,ss,r,ONLINE,behaviour_db,edgelist)
                             prox_edge = edgelist[new_state]
                         elif len(vn)==2:
@@ -213,14 +217,13 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         if s.getID() in works:
                             tweet(works,s.getID(),vehs,end_edge,mapdata,True)
                             print(str(vehicle)+" TWEETED: hey, there's work in progress at "+str(s.getID()))
-                    # if prox_edge.getID() in works:
-                    #     tweet(net.getEdge(roadid),prox_edge,vehs,graphdict,connections)
                     if prox_edge.getID() == end_edge[vehicle]:
                         print(vehicle+' ARRIVED')
                         if vehicle not in correctlyarrived:
                             correctlyarrived.append(vehicle)
-                    # print(str(vehicle)+'on edge '+str(currentid)+' target '+str(prox_edge.getID()))
-                    traci.vehicle.changeTarget(vehicle,prox_edge.getID())
+                    print(str(vehicle)+'on edge '+str(currentid)+' target '+str(prox_edge.getID())+' current target '+str(traci.vehicle.getRoute(vehicle)[-1]))
+                    # traci.vehicle.changeTarget(vehicle,prox_edge.getID())
+                    traci.vehicle.setRoute(vehicle,traci.simulation.findRoute(roadid,prox_edge.getID()).edges)
                     # colorvalue = sum(list(car_color(list(targets.keys())[list(targets.values()).index(end_edge[vehicle])]))[0:3])
                     if colorstreet:
                         colorvalue = getIfromRGB(list(car_color(list(targets.keys())[list(targets.values()).index(end_edge[vehicle])]))[0:3])

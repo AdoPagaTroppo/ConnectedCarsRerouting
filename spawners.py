@@ -3,7 +3,7 @@ import random
 from vehicledata import *
 from algorithms import build_path
 from agent import Agent
-from crowdsourcing import *
+from online_crowdsourcing import *
 
 def spawnRandom(graphdict):
     sourcenode = random.choice(list(graphdict.keys()))
@@ -60,7 +60,7 @@ def spawnUncontrolledCars(num_uncontrolled,mapdata):
     for c in range(int(num_uncontrolled)):
         source = random.choices(sources)[0]
         dest = random.choices(destinations,target_weights)[0]
-        # dest = destinations[0 if j%2 == 0 else 2]
+        # dest = destinations[2]
         id = 'veh'+str(c+1)+'_'+str(dest[1])
         routeid = 'route'+str(c+1)
         # pathbuilt=build_path(graphdict,source,net.getEdge(dest[0]).getToNode().getID(),'dijkstra',graphmap,connections=connections)
@@ -92,18 +92,19 @@ def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs):
     # start_edge = '-776505003#4'
     # start_edge = '1244093044#0'
     # start_edge = '392822665#1'
+    # start_edge = '-147391538#4'
     end_edge = {}
     agents = {}
     for i in range(int(NUM_AGENTS)):
         # destt = random.choices(destinations,target_weights)[0]
         destt = destinations[i%len(destinations)]
-        # destt = destinations[0]
+        # destt = destinations[2]
         dest = destt[0]
         agentid = 'agent'+str(i)+'_'+str(destt[1])
         agrouteid = agentid+'_route'
         end_edge[agentid] = dest
         agent = Agent(start_edge,list(targets.values()).index(dest)*NUM_ALGS)
-        crowds_controller = Crowdsourcing(agent,NUM_ALGS)
+        crowds_controller = OnlineCrowdsourcing(agent,NUM_ALGS,mapdata)
         agents[agentid] = crowds_controller
         vehs[agentid] = VehicleData(agentid,agrouteid,destt[1])
         traci.route.add(agrouteid,(start_edge,start_edge))
