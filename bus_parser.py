@@ -5,7 +5,7 @@ def bus_parser(starttime,scenario):
     code = '15' if scenario=='Unisa' else '02'
     data = []
     buslines = {}
-    with open('oraripullman.csv','r') as f:
+    with open('oraripullman.csv','r',errors='ignore') as f:
         data = f.readlines()
     currentline = ''
     valindexes = []

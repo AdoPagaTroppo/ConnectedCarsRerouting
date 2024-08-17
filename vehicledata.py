@@ -1,12 +1,13 @@
 
 class VehicleData:
     
-    def __init__(self,id,alg,dest=''):
+    def __init__(self,id,alg,depart,dest=''):
         self.id = id
         self.alg = alg
         self.speeds = []
         self.dist = 0
         self.dest = dest
+        self.depart = int(depart)
         self.fuelconsumption = 0
         self.waitingtime = 0
         self.noiseemission = 0

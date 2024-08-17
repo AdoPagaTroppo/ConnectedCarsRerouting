@@ -1,13 +1,10 @@
-import traci
-import traci._vehicle
-import traci.constants as tc
-import traci.domain
+
 import sumolib
 from algorithms import connection_exists
 from algorithms import build_path
 from vehicledata import VehicleData
 import random
-import randomTrips as rt
+import traci
 from graph_util import build_graph
 from agent import Agent
 import numpy as np
@@ -185,7 +182,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                 vehs[vehicle].waitingtime += traci.vehicle.getWaitingTime(vehicle)
                 vehs[vehicle].co2emission += traci.vehicle.getCO2Emission(vehicle)
                 vehs[vehicle].noiseemission += traci.vehicle.getNoiseEmission(vehicle)
-                vehs[vehicle].traveltime = scounter-traci.vehicle.getDeparture(vehicle)
+                vehs[vehicle].traveltime = scounter-vehs[vehicle].depart
                 if vehicle not in passed:
                     passed[vehicle] = {}
                 roadid = traci.vehicle.getRoadID(vehicle)
@@ -296,14 +293,14 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     if spawned:
                         print("Spawned random vehicle")
                         tottoarrive += 1 if NUM_AGENTS==0 else 0
-                        vehs[spawnedRand] = VehicleData(spawnedRand,spawnedRand.replace('_vehicle',''),'')
+                        vehs[spawnedRand] = VehicleData(spawnedRand,spawnedRand.replace('_vehicle',''),scounter*(mcounter+1),'')
                 if INCLUDE_BUS and tottoarrive+1<NUM_VEHICLES:
                     spawned, spawnedBuss = spawnBus(busdata,mcounter)
                     if spawned:
                         print("Spawned bus")
                         tottoarrive += len(spawnedBuss) if NUM_AGENTS==0 else 0
                         for el in spawnedBuss:
-                            vehs[el] = VehicleData(el,el+'route','')
+                            vehs[el] = VehicleData(el,el+'route',scounter*(mcounter+1),'')
         secondcounter += 1
         
     traci.close()

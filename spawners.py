@@ -67,7 +67,7 @@ def spawnUncontrolledCars(num_uncontrolled,mapdata):
         # paths['route'+str(c+1)] = traci.simulation.findRoute(net.getEdge(pathbuilt[0]).getID(),net.getEdge(pathbuilt[-1]).getID()).edges
         # route = traci.simulation.findRoute(net.getEdge(pathbuilt[0]).getID(),net.getEdge(pathbuilt[-1]).getID()).edges
         route = traci.simulation.findRoute(source,dest[0]).edges
-        vehs[id] = VehicleData(id,'route'+str(c+1),dest[1])
+        vehs[id] = VehicleData(id,'route'+str(c+1),i,dest[1])
         traci.route.add(routeid,route)
         traci.vehicle.add(id,routeid,'Car_AGENT',str(i))
         traci.vehicle.setSpeed(id,-1)
@@ -103,7 +103,7 @@ def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs):
         agent = Agent(start_edge,list(targets.values()).index(dest)*NUM_ALGS)
         crowds_controller = OnlineCrowdsourcing(agent,NUM_ALGS,mapdata)
         agents[agentid] = crowds_controller
-        vehs[agentid] = VehicleData(agentid,agrouteid,destt[1])
+        vehs[agentid] = VehicleData(agentid,agrouteid,i*10,destt[1])
         traci.route.add(agrouteid,(start_edge,start_edge))
         traci.vehicle.add(agentid,agrouteid,'Car_'+str(destt[1]),str(i*10))
         traci.vehicle.setSpeed(agentid,-1)
