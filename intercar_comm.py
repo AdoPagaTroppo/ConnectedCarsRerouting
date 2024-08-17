@@ -1,22 +1,10 @@
 import traci
 from behaviours_maker import valid_neighbors
 from queue import PriorityQueue
+from text2speech_handler import playWarningAudio
 
-THRESHOLD = 1
-
-# def tweet(source,road,vehicles,graphdict,connections):
-    # for v in vehicles:
-    #     route = traci.vehicle.getRoute(v)
-    #     if road.getID() in route and route.index(vehicles[v].currentroad)<route.index(road.getID()):
-    #         vehicles[v].influenced += 1
-    #         if vehicles[v].influenced >= 5:
-    #             vehicles[v].influenced = 0
-    #             vn = valid_neighbors(source,graphdict,connections,route[-1])
-    #             if len(vn)>1:
-    #                 r1 = traci.simulation.findRoute(source.getID(),vn[1].getID()).edges
-    #                 r2 = traci.simulation.findRoute(r1[-1],route[-1]).edges
-    #                 r1.extend(r2)
-    #                 traci.vehicle.setRoute(v,r1)
+PLAY_AUDIO = True
+workAudioPlayed = []
 
 def find_alternative(road,target,mapdata):
     net = mapdata.net
@@ -35,12 +23,19 @@ def find_alternative(road,target,mapdata):
                     if len(vn)==1:
                         returnroads.append(edid)
                         explore.put(edid)
+                    # else:
+                    #     vn2 = valid_neighbors(inced,mapdata,target,road)
+                    #     if len(vn2)==1:
+                    #         returnroads.append(edid)
+                    #         explore.put(edid)
+        # print('exploring')
     return returnroads
     
 
-def tweet(works,road,vehs,end_edge,mapdata,agent):
+def tweet(works,road,vehs,end_edge,mapdata,agent,vehicle,LANG,THRESHOLD):
     prevval = works[road]
-    works[road] += 10 if agent else 1
+    works[road] += (10 if agent else 2)*vehicle.influence
+    colorworks = True
     if works[road]>=THRESHOLD and prevval<THRESHOLD:
         for v in vehs:
             if v.__contains__('agent'):
@@ -48,6 +43,11 @@ def tweet(works,road,vehs,end_edge,mapdata,agent):
                 for r in roadsequence:
                     vehs[v].weightened[r] = len(roadsequence)
                 # vehs[v].weightened.extend(roadsequence)
-                # for r in roadsequence:
-                #     traci.edge.setParameter(r,'color',100000)
+                if colorworks:
+                    traci.edge.setParameter(road,'color',100000)
+                    for r in roadsequence:
+                        traci.edge.setParameter(r,'color',100000)
+                if PLAY_AUDIO and road not in workAudioPlayed:
+                    playWarningAudio(mapdata,road,roadsequence,LANG)
+                    workAudioPlayed.append(road)
                 print(roadsequence)

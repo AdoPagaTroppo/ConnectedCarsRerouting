@@ -1,6 +1,8 @@
 import os
 
-def bus_parser(starttime):
+def bus_parser(starttime,scenario):
+    searchstring = 'UNIVERSITA' if scenario=='Unisa' else 'VINCIPROVA'
+    code = '15' if scenario=='Unisa' else '02'
     data = []
     buslines = {}
     with open('oraripullman.csv','r') as f:
@@ -19,7 +21,7 @@ def bus_parser(starttime):
         elif stringels[0].__contains__('Validità'):
             valindexes.clear()
             for i in range(len(stringels)):
-                if stringels[i].__contains__('15'):
+                if stringels[i].__contains__(code):
                     valindexes.append(i)
         elif len(stringels[0])>1:
             index = 0
@@ -42,7 +44,7 @@ def bus_parser(starttime):
                 # for k in range(len(buslines[p][i])):
                 try:
                     hour = int(j[1].split(':')[0])
-                    if j[0].__contains__('UNIVERSITA') and (hour<starttime+4 and hour>starttime-1):
+                    if j[0].__contains__(searchstring) and (hour<starttime+4 and hour>starttime-1):
                         if p not in usefulbuslines:
                             usefulbuslines[p] = {}
                         if i not in usefulbuslines[p]:
@@ -60,7 +62,7 @@ def bus_parser(starttime):
             # print('Route '+str(i+1))
             for j in usefulbuslines[p][i]:
                 if source is None:
-                    if j[0].__contains__('UNIVERSITA'):
+                    if j[0].__contains__(searchstring):
                         source = source2edge(j[0]),calculate_counter(starttime,j[1])    
                     else:
                         source = lineend(p,'from',j[0]),calculate_counter(starttime,j[1],True)

@@ -9,8 +9,9 @@ CREATE_BEHAVIOURS = False
 RUN_SIMULATION = True
 NUM_ALGS = 4
 IMG_FOLDER = 'UnisaScenario_12h_noincident/'
+SCENARIO = 'Unisa'
 NUMBER_OF_CARS = 100
-NUM_AGENTS = 12
+NUM_AGENTS = 1
 USE_NUM_AGENTS = True
 PERC_AGENTS = 0.3
 TIME_HORIZON = 5 # keep around 5
@@ -31,11 +32,11 @@ if RUN_SIMULATION:
     co2em = []
     noise = []
     numberofsim = 1
-    mapdata = MapData()
+    mapdata = MapData(SCENARIO)
     if numberofsim<2:
         if not USE_NUM_AGENTS:
             NUM_AGENTS = PERC_AGENTS*NUMBER_OF_CARS
-        retval,agents,arrived = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.1,True,True,12,PERC_AGENTS,mapdata,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=True,CONSIDER_WORKS=False)
+        retval,agents,arrived,sta,ssa,fa = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.05,False,True,12,PERC_AGENTS,mapdata,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=True,CONSIDER_WORKS=True)
         vehicle_speeds = []
         vehicle_fuelconsumptions = []
         vehicle_waitingtimes = []
@@ -56,12 +57,14 @@ if RUN_SIMULATION:
         co2em.append(sum(vehicle_co2emissions)/len(vehicle_co2emissions))
         print('SPAWNED AGENTS || ARRIVED AGENTS')
         print(str(agents)+' || '+str(len(arrived)))
+        print('SPEED TIME AVERAGE || SPEED SPACE AVERAGE || FLOW AVERAGE')
+        print(str(sta)+' || '+str(ssa)+' || '+str(fa))
     else: 
         for i in range(numberofsim):
             ssize = 0.1
             if i == 0:
                 ssize = 1.0
-            retval,agents,arrived = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,ssize,True,True,12,0.1*(i),mapdata,False,i,NUM_ALGS=NUM_ALGS,ONLINE=True)
+            retval,agents,arrived,sta,ssa,fa = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,ssize,True,True,12,0.1*(i),mapdata,False,i,NUM_ALGS=NUM_ALGS,ONLINE=True)
             vehicle_speeds = []
             vehicle_fuelconsumptions = []
             vehicle_waitingtimes = []
@@ -82,6 +85,8 @@ if RUN_SIMULATION:
             co2em.append(sum(vehicle_co2emissions)/len(vehicle_co2emissions))
             print('SPAWNED AGENTS || ARRIVED AGENTS')
             print(str(agents)+' || '+str(len(arrived)))
+            print('SPEED TIME AVERAGE || SPEED SPACE AVERAGE || FLOW AVERAGE')
+            print(str(sta)+' || '+str(ssa)+' || '+str(fa))
     if SAVE_FILE:
         np.save(IMG_FOLDER+str(NUMBER_OF_CARS)+'cars_'+str(TIME_HORIZON)+'hor_'+str(NUM_AGENTS)+'_agents_speeds.ny',speedsplot)
         np.save(IMG_FOLDER+str(NUMBER_OF_CARS)+'cars_'+str(TIME_HORIZON)+'hor_'+str(NUM_AGENTS)+'_agents_fuelconsumption.ny',fuels)

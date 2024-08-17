@@ -3,6 +3,7 @@ from algorithms import build_path
 from behaviours_maker import index2alg
 import traci
 from mapdata import MapData
+import matplotlib.pyplot as plt
 
 # sumoCmd = ['sumo', "-c", 'osm4.sumocfg',"--step-length","0.05"] #The last parameter is the step size, has to be small
 # traci.start(sumoCmd)
@@ -45,7 +46,14 @@ from mapdata import MapData
 # colorvalue = getIfromRGB(list(car_color('PENTA'))[0:3])
 # print(colorvalue)
 
-md = MapData()
-start = '951974693#2'
-goal = '330222144'
-print(build_path(md,start,goal,'e_bfs'))
+# md = MapData()
+# start = '951974693#2'
+# goal = '330222144'
+# print(build_path(md,start,goal,'e_bfs'))
+
+import numpy as np
+
+b = np.load('test_behaviours.npy')
+plt.matshow(b[4])
+plt.colorbar()
+plt.show()

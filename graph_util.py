@@ -1,8 +1,8 @@
 import sumolib
 import traci
 
-def build_graph():
-    net = sumolib.net.readNet('fiscianobaronissi.net.xml')
+def build_graph(scenario):
+    net = sumolib.net.readNet(str(scenario)+'.net.xml')
     nodes = traci.junction.getIDList()
     graphdict = {}
     graphmap = {}
@@ -16,15 +16,16 @@ def build_graph():
                         graphdict[n][neighbour.getID()] = edge.getID(),edge.getLength()
         except:
             pass
-    connects = sumolib.xml.parse_fast('fiscianobaronissi.net.xml','connection',['from','to'])
+    connects = sumolib.xml.parse_fast(str(scenario)+'.net.xml','connection',['from','to','dir'])
     connections = {}
     for c in connects:
         key = c[0]
         if key not in connections:
-            connections[key] = []
+            connections[key] = {}
         val = c[1]
         if net.getEdge(val).allows('passenger'):
-            connections[key].append(val)
+            connections[key][val] = c[2]
+            # connections[key].append(val)
     edgegraph = {}
     edges = net.getEdges()
     for e in edges:
@@ -32,5 +33,5 @@ def build_graph():
         if net.getEdge(edid).allows('passenger'):
             edgegraph[edid] = []
             if edid in connections:
-                edgegraph[edid].extend(connections[edid])
+                edgegraph[edid].extend(list(connections[edid].keys()))
     return graphdict, graphmap, net, connections, edgegraph

@@ -115,4 +115,4 @@ class OnlineCrowdsourcing():
         pf = sources[indMin, xInd] #Pick pf
         # print([x for x in pf if x!=0])
         # pf = sources[self.targetIndex, xInd] #Pick pf
-        return(np.random.choice(range(self.edgeNum), p = pf)) #Sample pf and return resulting state
+        return(np.random.choice(range(self.edgeNum), p = pf)),indMin #Sample pf and return resulting state

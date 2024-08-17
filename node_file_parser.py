@@ -25,10 +25,24 @@ def parse_file_for_work(filename):
         works[el] = 0
     return works
     
-# targets, sources = parse_file_for_nodes('config.txt')
-# print("Targets:")
-# for t in targets:
-#     print(t)
-# print("Sources: ")
-# for s in sources:
-#     print(s)
+def parse_file_for_checkpoints(filename):
+    dataread = []
+    targets = []
+    with open(filename,'r') as rf:
+        dataread = rf.readlines()
+    for el in dataread:
+        el = el.replace('\n','')
+        pieces = el.split(':')
+        if pieces[0]=='target':
+            targets.append((pieces[1],pieces[2],float(pieces[3])))
+    checkpoints = {}
+    for t in targets:
+        if t[0] not in checkpoints:
+            checkpoints[t[0]] = {}
+            checkpoints[t[0]]['speed'] = []
+            checkpoints[t[0]]['flow'] = 0
+        if 'place' not in checkpoints[t[0]]:
+            checkpoints[t[0]]['place'] = []
+        checkpoints[t[0]]['place'].append(t[1])
+    print(checkpoints)
+    return checkpoints
