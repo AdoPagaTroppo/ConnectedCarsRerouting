@@ -5,7 +5,7 @@ import numpy as np  # for array management
 from behaviours_maker import index2alg
 
 # UNISA NET ------------
-behaviors_name = r"test_behaviours.npy"
+behaviors_name = r"behaviors_Unisa_4.npy"
 
 # ###This is where the behaviors are loaded
 behaviors = np.load(behaviors_name) 
@@ -45,8 +45,6 @@ class Crowdsourcing():
         ### Decision-making loop
         # Arguments: state, time horizon, state space, reward array (actually a cost)
         xInd = np.where(stateSpace == state)[0][0] #Index of the state in the reduced state space
-        if online and behaviours is not None:
-            behaviors = behaviours
         # if online and behaviours is not None:
         #     self.edgeNum = behaviours.shape[1]
         #     self.targetNum = behaviours.shape[0]
@@ -121,4 +119,4 @@ class Crowdsourcing():
         pf = sources[indMin, xInd] #Pick pf
         # print([x for x in pf if x!=0])
         # pf = sources[self.targetIndex, xInd] #Pick pf
-        return(np.random.choice(range(self.edgeNum), p = pf)) #Sample pf and return resulting state
+        return(np.random.choice(range(self.edgeNum), p = pf)),indMin #Sample pf and return resulting state

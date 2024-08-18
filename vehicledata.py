@@ -16,3 +16,4 @@ class VehicleData:
         self.influence = 0.5
         self.currentroad = ''
         self.weightened = {}
+        self.arrived = False

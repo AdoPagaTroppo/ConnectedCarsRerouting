@@ -3,7 +3,7 @@ from behaviours_maker import valid_neighbors
 from queue import PriorityQueue
 from text2speech_handler import playWarningAudio
 
-PLAY_AUDIO = True
+PLAY_AUDIO = False
 workAudioPlayed = []
 
 def find_alternative(road,target,mapdata):

@@ -90,124 +90,137 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased):
                 route.extend(ext)
     return route
     
-def create_behaviours(num_algs):
+def create_behaviours(num_algs,mapdata):
 
     if 'SUMO_HOME' in os.environ:
         tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
         sys.path.append(tools)
     else:
         sys.exit("please declare environment variable 'SUMO_HOME'")
+    targets = mapdata.targets
+    edge_list = mapdata.edgelist
+    net = mapdata.net
+    edge_dict = mapdata.edge_dict
+    
 
-
-    # SALERNO NET ------------
-    net_name = "fiscianobaronissi.net.xml"
-    sumocfg_name = "osm4.sumocfg"
-    behaviors_name = "test_behaviours.npy"
-    dests, sources = parse_file_for_nodes('config.txt')
-    destnodes, s = parse_file_for_nodes('config_nodes.txt')
-    targets = []
-    for d in dests:
-        targets.append(d[0])
-    # targets = ['330222144','-40567772#0','330224632','1084284613','84679693','620934337#2']
-    # targets = ['1084284613']
-    #targets are parking spaces
-    # targets = ['672732730', '-672732731','-672732728', '401420254#0','-565381618#0', '401420254#4', '-1001198066',
-    #           '744932253', '670934106', '670934108', '160821659#2', '671983008', '92961457#3', '92961457#4', 
-    #           '92961462', '672273418#3', '673737658#3', '673737658#6', '-565381618#0', '163563222', 'E5', 'E6'] 
-
-    #Choose between these lines for GUI or not
-    #sumoBinary = sumolib.checkBinary('sumo-gui')
+    sumocfg_name = 'osm_'+str(mapdata.scenario)+'.sumocfg'
     sumoBinary = sumolib.checkBinary('sumo')
 
     sumoCmd = [sumoBinary, "-c", sumocfg_name,"--step-length","0.05"] #The last parameter is the step size, has to be small
     traci.start(sumoCmd)
     print("Starting SUMO...")
-    graphdict, graphmap, net, connections = build_graph()
-    # print(graphdict['932314595'])
-    #read road network
-    edgelist = net.getEdges()
-    edge_list = []
-    for edge in edgelist:
-        if edge.allows('passenger'):
-            edge_list.append(edge)
-    #Dictionary of list IDs
-    edge_dict = {}
-
-    for e in edge_list:
-        edge_dict[e.getID()] = edge_list.index(e)
 
     behaviors = np.zeros((len(targets)*num_algs, len(edge_list), len(edge_list)))
 
     i=0
     for t in targets:
         pmfs = np.zeros((len(edge_list), len(edge_list)))
-        endnode = net.getEdge(t).getToNode().getID()
-        print(endnode)
+        dijkstrabased = {}
+        target_edge = targets[t]
         for j in range(num_algs):
-            for e in edge_list: 
-                route = []
-                # if j == 0:
-                #     route = traci.simulation.findRoute(e.getID(), t).edges
-                # else:
-                #     route = traci.simulation.findRoute(e.getID(), t, "routerByDistance").edges
-                if j == 0:
-                        route = traci.simulation.findRoute(e.getID(), t).edges
-                elif j == 1:
-                    route = traci.simulation.findRoute(e.getID(), t, "routerByDistance").edges
-                else:
-                    route = []
-                    route.append(e.getID())
-                    ext = build_path(graphdict,e.getToNode().getID(),endnode,index2alg(j),graphmap=graphmap,connections=connections,edge=e.getID())
-                    if ext is None:
-                        route = None
-                    else:
-                        if 'SUCC' not in ext:
-                            route.extend(ext)
+            pmfs = np.zeros((len(edge_list), len(edge_list)))
+            for e in edge_list:
+                route = index2path(j,target_edge,e,mapdata,dijkstrabased)
                 pmf = [0]*((len(edge_list)))
-                
                 if route is None or len(route) ==0 : # edges are not connected 
                     for x in range(len(pmf)):
                         pmf[x] = 0
-                
                 elif(len(route) == 1):
                     e_prime = e.getID()
                     pmf[edge_dict[e_prime]] = 1.0
-                    print(str(route)+' from edge '+str(e.getID()))
-                    # prob = 0.95 
-                    
-                    # pmf[edge_dict[e_prime]] = 0.95  
-                    # valid_edges = valid_neighbors(e,graphdict,connections)
-                        
-                    # for v in valid_edges:
-                    #     if(edge_dict[v.getID()]!= edge_dict[e_prime]):
-                    #         pmf[edge_dict[v.getID()]] = (1-prob) / len(valid_edges)
                 else:
-                    
                     e_prime = route[1] # e' is the edge just after e 
 
-                    prob = 0.95
+                    prob = 0.99 
                     pmf[edge_dict[e_prime]] = prob
 
-                    valid_edges = valid_neighbors(e,graphdict,connections,t)
-
+                    valid_edges = valid_neighbors(e,mapdata,target_edge)
+                    # valid_lengths = valid_neighbors_lengths(valid_edges,t)
+                    # totlength = sum(valid_lengths.values())
                     for v in valid_edges:
                         if(edge_dict[v.getID()]!= edge_dict[e_prime]):
-                            pmf[edge_dict[v.getID()]] = (1-prob) / len(valid_edges)
-
+                            pmf[edge_dict[v.getID()]] = (1-prob) / (len(valid_edges)-1)
+                        # pmf[edge_dict[v.getID()]] = (totlength-valid_lengths[v])/totlength if totlength!=valid_lengths[v] else 1.0
+                        # print(str(v)+" "+str(pmf[edge_dict[v.getID()]]))
+                    if len(valid_edges)>1 and j==0:
+                        dijkstrabased[e.getID()] = e_prime
+                    
                 pmf = np.array(pmf)
                         
                 if np.sum(pmf) !=0:
                     pmf = pmf/np.sum(pmf)
                         
                 pmfs[edge_dict[e.getID()]] = pmf
-                    
-            behaviors[i] = pmfs
-
-
+                # print([x for x in pmf if x!=0])
+            
+            for k in range(len(pmfs)):
+                behaviors[i,k] = behaviors[i,k]+pmfs[k]
+                if np.sum(behaviors[i,k])>1:
+                    print('WARNING HERE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')        
             i+=1
+            #     route = []
+            #     # if j == 0:
+            #     #     route = traci.simulation.findRoute(e.getID(), t).edges
+            #     # else:
+            #     #     route = traci.simulation.findRoute(e.getID(), t, "routerByDistance").edges
+            #     if j == 0:
+            #             route = traci.simulation.findRoute(e.getID(), t).edges
+            #     elif j == 1:
+            #         route = traci.simulation.findRoute(e.getID(), t, "routerByDistance").edges
+            #     else:
+            #         route = []
+            #         route.append(e.getID())
+            #         ext = build_path(graphdict,e.getToNode().getID(),endnode,index2alg(j),graphmap=graphmap,connections=connections,edge=e.getID())
+            #         if ext is None:
+            #             route = None
+            #         else:
+            #             if 'SUCC' not in ext:
+            #                 route.extend(ext)
+            #     pmf = [0]*((len(edge_list)))
+                
+            #     if route is None or len(route) ==0 : # edges are not connected 
+            #         for x in range(len(pmf)):
+            #             pmf[x] = 0
+                
+            #     elif(len(route) == 1):
+            #         e_prime = e.getID()
+            #         pmf[edge_dict[e_prime]] = 1.0
+            #         print(str(route)+' from edge '+str(e.getID()))
+            #         # prob = 0.95 
+                    
+            #         # pmf[edge_dict[e_prime]] = 0.95  
+            #         # valid_edges = valid_neighbors(e,graphdict,connections)
+                        
+            #         # for v in valid_edges:
+            #         #     if(edge_dict[v.getID()]!= edge_dict[e_prime]):
+            #         #         pmf[edge_dict[v.getID()]] = (1-prob) / len(valid_edges)
+            #     else:
+                    
+            #         e_prime = route[1] # e' is the edge just after e 
+
+            #         prob = 0.95
+            #         pmf[edge_dict[e_prime]] = prob
+
+            #         valid_edges = valid_neighbors(e,graphdict,connections,t)
+
+            #         for v in valid_edges:
+            #             if(edge_dict[v.getID()]!= edge_dict[e_prime]):
+            #                 pmf[edge_dict[v.getID()]] = (1-prob) / len(valid_edges)
+
+            #     pmf = np.array(pmf)
+                        
+            #     if np.sum(pmf) !=0:
+            #         pmf = pmf/np.sum(pmf)
+                        
+            #     pmfs[edge_dict[e.getID()]] = pmf
+                    
+            # behaviors[i] = pmfs
+
+
+            # i+=1
     print("Behaviors generated!")
     traci.close()
-    np.save(behaviors_name, behaviors)
+    np.save('behaviors_'+str(mapdata.scenario)+'_'+str(num_algs), behaviors)
     
 def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,behavior_created,colorpaths=False,colorprobs=False):
     targets = mapdata.targets
@@ -286,15 +299,6 @@ def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,beh
         for k in range(len(pmfs)):
             behaviors[i,k] = behaviors[i,k]+pmfs[k]
             if np.sum(behaviors[i,k])>1:
-                print('WARNING HERE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')                
-        # print('updated target '+str(target_edge)+' alg '+index2alg(j))
-        # okay = True
-        # # for x in (behaviors[i]+pmfs):
-        # #     if np.sum(x)>1:
-        # #         okay = False
-        # if okay:
-        #     behaviors[i] = behaviors[i]+pmfs
-        #     print(behaviors.shape)
-        #     print(['AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'+str(x) for x in behaviors[i] if np.sum(x,0)>1])
+                print('WARNING HERE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')        
         i+=1
     return behaviors,paths

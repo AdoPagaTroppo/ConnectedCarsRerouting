@@ -19,6 +19,7 @@ from node_file_parser import parse_file_for_checkpoints
 from mpl_toolkits import mplot3d
 
 WORKS_THRESHOLD = 1
+PLAY_AUDIO = False
 
 def randomSignal(prob,vehicle,roadid,works):
     signal = random.random()<prob
@@ -132,7 +133,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     destinations = mapdata.destinations
     checkpoints = parse_file_for_checkpoints(str(SCENARIO)+'ScenarioData/checkpoints.txt')
     vehs = spawnUncontrolledCars(int((PERC_UNI_CARS-PERC_AGENT_CARS)*NUM_VEHICLES),mapdata)
-    agents,end_edge = spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs)
+    agents,end_edge = spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,ONLINE)
     print('loaded vehicles')
     totarrived = 0
     rerouting_occurred = {}
@@ -172,6 +173,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                 insim.append(vehicle)
             elif vehicle in traci.simulation.getArrivedIDList():
                 insim.remove(vehicle)
+                vehs[vehicle].arrived = True
                 if NUM_AGENTS == 0:
                     totarrived += 1
             if vehicle in insim:
@@ -182,7 +184,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                 vehs[vehicle].waitingtime += traci.vehicle.getWaitingTime(vehicle)
                 vehs[vehicle].co2emission += traci.vehicle.getCO2Emission(vehicle)
                 vehs[vehicle].noiseemission += traci.vehicle.getNoiseEmission(vehicle)
-                vehs[vehicle].traveltime = scounter-vehs[vehicle].depart
+                vehs[vehicle].traveltime = (scounter+1)-vehs[vehicle].depart
                 if vehicle not in passed:
                     passed[vehicle] = {}
                 roadid = traci.vehicle.getRoadID(vehicle)
@@ -205,7 +207,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     occupied_edges[roadid] += 1
                 else:
                     occupied_edges[roadid] = 1
-                if vehicle.__contains__('agent') and (vehicle not in prev_edge or vehicle in prev_edge and prev_edge[vehicle]!=roadid) and (vehicle in next_edge and next_edge[vehicle]!=end_edge[vehicle] or vehicle not in next_edge):
+                if vehicle.__contains__('agent') and (vehicle not in prev_edge or vehicle in prev_edge and prev_edge[vehicle]!=roadid) and (vehicle in next_edge and next_edge[vehicle]!=end_edge[vehicle] or vehicle not in next_edge) and len(roadid)>2:
                     currentid = roadid if not roadid.__contains__(':') else next_edge[vehicle]
                     statecars = edgelist.index(net.getEdge(currentid))
                     vn = []
@@ -253,7 +255,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                             prox_edge = vn[0]
                             selpath = traci.simulation.findRoute(currentid,end_edge[vehicle]).edges
                     if len(vn2)>2:
-                        if NUM_AGENTS==1 and currentid==roadid:
+                        if NUM_AGENTS==1 and currentid==roadid and PLAY_AUDIO:
                             playAudio(mapdata,currentid,prox_edge,LANG)
                     next_edge[vehicle] = prox_edge.getID()
                     for s in vn:
@@ -270,7 +272,6 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     # colorvalue = sum(list(car_color(list(targets.keys())[list(targets.values()).index(end_edge[vehicle])]))[0:3])
                     if colorstreet and selpath is not None:
                         colorvalue = getIfromRGB(list(car_color(list(targets.keys())[list(targets.values()).index(end_edge[vehicle])]))[0:3])
-                        print(selpath)
                         for stre in edgelist:
                             if stre.getID() in selpath:
                                 traci.edge.setParameter(stre.getID(),'color',colorvalue)
@@ -307,11 +308,12 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     # print("VEHICLE || ALGORITHM || AVG_SPEED || TRAVELED_DISTANCE || DESTINATION")
     retds = []
     for vehicle in vehs:
-        spedlen = len(vehs[vehicle].speeds)
-        avgspeed = 0
-        if spedlen != 0:
-            avgspeed = sum(vehs[vehicle].speeds)/len(vehs[vehicle].speeds)
-        retds.append((vehicle,vehs[vehicle].alg,avgspeed,vehs[vehicle].dist,vehs[vehicle].fuelconsumption,vehs[vehicle].waitingtime,vehs[vehicle].noiseemission,vehs[vehicle].co2emission,vehs[vehicle].traveltime))
+        if vehs[vehicle].arrived:
+            spedlen = len(vehs[vehicle].speeds)
+            avgspeed = 0
+            if spedlen != 0:
+                avgspeed = sum(vehs[vehicle].speeds)/len(vehs[vehicle].speeds)
+            retds.append((vehicle,vehs[vehicle].alg,avgspeed,vehs[vehicle].dist,vehs[vehicle].fuelconsumption,vehs[vehicle].waitingtime,vehs[vehicle].noiseemission,vehs[vehicle].co2emission,vehs[vehicle].traveltime))
         # print(str(vehicle)+" || "+str(vehs[vehicle].alg)+" || "+str(sum(vehs[vehicle].speeds)/len(vehs[vehicle].speeds))+" || "+str(vehs[vehicle].dist)+" || "+str(vehs[vehicle].dest))
     speed_time_averages = []
     speed_space_averages = []
@@ -331,7 +333,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     speed_tavg = sum(speed_time_averages)/100
     speed_savg = sum(speed_space_averages)/100
     flow_avg = sum(flow_averages)/100
-    plt.matshow(behaviour_db[0])
-    plt.colorbar()
-    plt.show()
+    # plt.matshow(behaviour_db[0])
+    # plt.colorbar()
+    # plt.show()
     return retds,NUM_AGENTS,correctlyarrived,speed_tavg,speed_savg,flow_avg
