@@ -1,5 +1,5 @@
 <viewsettings>
-    <scheme name="custom_1">
+    <scheme name="road_colors">
         <opengl dither="0" fps="0" drawBoundaries="0" forceDrawPositionSelection="0" disableDottedContours="0" forceDrawRectangleSelection="0" geometryIndices_show="0" geometryIndices_size="50.00" geometryIndices_color="255,0,128" geometryIndices_bgColor="128,0,0,0" geometryIndices_constantSize="1" geometryIndices_onlySelected="0"/>
         <background backgroundColor="51,128,51" showGrid="0" gridXSize="100.00" gridYSize="100.00"/>
         <edges laneEdgeMode="31" scaleMode="0" laneShowBorders="1" showBikeMarkings="1" showLinkDecals="1" realisticLinkRules="0" showLinkRules="1" showRails="1" secondaryShape="0" hideConnectors="1" widthExaggeration="1.00" minSize="0.00" showDirection="0" showSublanes="0" spreadSuperposed="0" edgeParam="color" laneParam="LANE_KEY" vehicleParam="PARAM_NUMERICAL" vehicleScaleParam="PARAM_NUMERICAL" vehicleTextParam="PARAM_TEXT" edgeData="speed" edgeDataID="" edgeDataScaling="" edgeValueHideCheck="0" edgeValueHideThreshold="0.00" edgeValueHideCheck2="0" edgeValueHideThreshold2="200.00"
@@ -239,12 +239,14 @@
             </colorScheme>
             <colorScheme name="by param (numerical, streetwise)" interpolated="1">
                 <entry color="30,22,22" threshold="0.00"/>
+                <entry color="255,108,0" threshold="12.00"/>
                 <entry color="blue" threshold="255.00"/>
                 <entry color="green" threshold="65280.00"/>
                 <entry color="cyan" threshold="65535.00"/>
                 <entry color="red" threshold="16711680.00"/>
                 <entry color="magenta" threshold="16711935.00"/>
                 <entry color="yellow" threshold="16776960.00"/>
+                <entry color="255,169,107" threshold="10.00"/>
                 <entry color="black" name="missing data"/>
             </colorScheme>
             <colorScheme name="by param (numerical, lanewise)" interpolated="1">

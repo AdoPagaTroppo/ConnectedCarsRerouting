@@ -27,6 +27,7 @@
 
     <gui_only>
         <gui-settings-file value="osm.view.xml"/>
+        <start value="true"/>
     </gui_only>
 
 </configuration>

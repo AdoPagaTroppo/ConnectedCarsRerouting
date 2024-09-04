@@ -63,26 +63,30 @@ def bus_parser(starttime,scenario):
             for j in usefulbuslines[p][i]:
                 if source is None:
                     if j[0].__contains__(searchstring):
-                        source = source2edge(j[0]),calculate_counter(starttime,j[1])    
+                        source = source2edge(j[0],scenario),calculate_counter(starttime,j[1])    
                     else:
                         source = lineend(p,'from',j[0]),calculate_counter(starttime,j[1],True)
                     l.append(source)
                 else:
-                    dest = source2edge(j[0])
+                    dest = source2edge(j[0],scenario)
                     if dest!='unk':
                         l.append((dest,calculate_counter(starttime,j[1])))
                     else:
                         if j==usefulbuslines[p][i][-1]:
                             l.append((lineend(p,'to',j[0]),calculate_counter(starttime,j[1],True)))
                 # print(j)
+            if source is None:
+                print("source is still none for "+str(i+1))
             buss[(l[0][1],p)] = l
     return buss
                 
-def source2edge(source):
+def source2edge(source,scenario):
     if source == "FISCIANO UNIVERSITA'":
         return "-392822665#5"           
     elif source == "LANCUSI UNIVERSITA'":
-        return "707344764#2"
+        return "707344764#2" if scenario=='Unisa' else 'unk'
+    elif source == 'VINCIPROVA':
+        return "398058811#0"
     return 'unk'
 
 def lineend(source,direction,additional=None):
@@ -106,6 +110,26 @@ def lineend(source,direction,additional=None):
         return "330222144" if direction=='to' else "84945288#0"
     elif source.__contains__('084'):
         return "330222144" if direction=='to' else "84945288#0"
+    elif source.__contains__('002'):
+        return "671510078#4" if direction=='to' else "-671510078#4"
+    elif source.__contains__('003'):
+        return "671037653" if direction=='to' else "-124115234#0"
+    elif source.__contains__('004'):
+        return "102235300#2" if direction=='to' else "-102235300#2"
+    elif source.__contains__('006'):
+        return "-69364147#1" if direction=='to' else "69364147#1"
+    elif source.__contains__('008'):
+        return "-329813386#0" if direction=='to' else "329813386#0"
+    elif source.__contains__('009'):
+        return "102235300#2" if direction=='to' else "-102235300#2"
+    elif source.__contains__('00A'):
+        return "-371126853#0" if direction=='to' else "1134538182"
+    elif source.__contains__('010'):
+        return "671510078#4" if direction=='to' else "-671510078#4"
+    elif source.__contains__('014'):
+        return "-160827513#0" if direction=='to' else "160827513#0"
+    elif source.__contains__('015'):
+        return "-160827520#1" if direction=='to' else "160827520#1"
 
 def calculate_counter(starttime,giventime,notuni=False):
     givsplit = giventime.split(':')

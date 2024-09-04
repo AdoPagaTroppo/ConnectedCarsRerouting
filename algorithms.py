@@ -1,5 +1,7 @@
 from queue import PriorityQueue
+from queue import Queue
 import math
+import traci
 
 def connection_exists(node1,node2,node3,graphdict,connections,edge=None):
     # print(node1+" "+node2+" "+node3)
@@ -34,6 +36,10 @@ def build_path(mapdata,start,goal,type,forbidnode=None,edge=None):
         return edge_bfs(start,goal,edgegraph,forbidnode)
     elif type=='e_greedybfs':
         return edge_greedybfs(mapdata,start,goal,forbidnode)
+    elif type=='e_dijkstra':
+        return edge_dijkstra(mapdata,start,goal,forbidnode)
+    elif type=='e_astar':
+        return edge_astar(mapdata,start,goal,forbidnode)
     return None
 
 def bfs(graphdict,start,goal,connections,edge):
@@ -183,7 +189,7 @@ def astar(graphdict,start,goal,graphmap,forbidnode=None,connections=None,edge=No
 def edge_bfs(start,goal,edgegraph,forbidnode=None):
     if start == goal:
         return ['SUCC']
-    frontier = PriorityQueue()
+    frontier = Queue()
     frontier.put(start)
     came_from = {}
     came_from[start] = None
@@ -194,7 +200,7 @@ def edge_bfs(start,goal,edgegraph,forbidnode=None):
             goal_found = True
             break
         for dests in edgegraph[current]:
-            if dests not in came_from and dests!=forbidnode:
+            if dests not in came_from and (forbidnode is None or (forbidnode is not None and dests not in forbidnode)):
                 frontier.put(dests)
                 came_from[dests] = current
     if goal_found:
@@ -216,18 +222,18 @@ def edge_greedybfs(mapdata,start,goal,forbidnode=None):
     if start == goal:
         return ['SUCC']
     frontier = PriorityQueue()
-    frontier.put(start,0)
+    frontier.put((0,start))
     came_from = {}
     came_from[start] = None
     goal_found = False
     while not frontier.empty():
-        current = frontier.get()
+        current = frontier.get()[1]
         if current == goal:
             goal_found = True
             break
         for dests in edgegraph[current]:
-            if dests not in came_from and dests != forbidnode:
-                frontier.put(dests,heuristic(net.getEdge(dests).getToNode().getID(),net.getEdge(goal).getToNode().getID(),graphmap))
+            if dests not in came_from and (forbidnode is None or (forbidnode is not None and dests not in forbidnode)):
+                frontier.put((heuristic(net.getEdge(dests).getToNode().getID(),net.getEdge(goal).getToNode().getID(),graphmap),dests))
                 came_from[dests] = current
     if goal_found:
         path = []
@@ -240,3 +246,86 @@ def edge_greedybfs(mapdata,start,goal,forbidnode=None):
         return path
     else:
         return None
+    
+def edge_dijkstra(mapdata,start,goal,forbidnode=None):
+    if start == goal:
+        return ['SUCC']
+    edgegraph = mapdata.edgegraph
+    net = mapdata.net
+    frontier = PriorityQueue()
+    frontier.put((0,start))
+    came_from = {}
+    came_from[start] = None
+    cost_so_far = {}
+    cost_so_far[start] = net.getEdge(start).getLength()/net.getEdge(start).getSpeed()
+    goal_found = False
+    while not frontier.empty():
+        popel = frontier.get()
+        current = popel[1]
+        if current == goal:
+            goal_found = True
+            break
+        for dests in edgegraph[current]:
+            if forbidnode is None or (forbidnode is not None and dests not in forbidnode):
+                # new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength())
+                # new_cost=float(cost_so_far[current])+float(traci.edge.getTraveltime(dests))
+                new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength()/net.getEdge(dests).getSpeed())
+                if dests not in cost_so_far or new_cost<cost_so_far[dests]:
+                    frontier.put((new_cost,dests))
+                    came_from[dests] = current
+                    cost_so_far[dests] = new_cost
+    if goal_found:
+        path = []
+        current = goal
+        while current!=start:
+            path.append(current)
+            current = came_from[current]
+        path.append(start)
+        path.reverse()
+        return path
+    else:
+        return None
+    
+def edge_astar(mapdata,start,goal,forbidnode=None):
+    if start == goal:
+        return ['SUCC']
+    edgegraph = mapdata.edgegraph
+    net = mapdata.net
+    graphmap = mapdata.graphmap
+    frontier = PriorityQueue()
+    frontier.put((0,start))
+    came_from = {}
+    came_from[start] = None
+    cost_so_far = {}
+    cost_so_far[start] = net.getEdge(start).getLength()/net.getEdge(start).getSpeed()
+    goal_found = False
+    while not frontier.empty():
+        current = frontier.get()[1]
+        if current == goal:
+            goal_found = True
+            break
+        for dests in edgegraph[current]:
+            if forbidnode is None or (forbidnode is not None and dests not in forbidnode):
+                # new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength())
+                new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength()/net.getEdge(dests).getSpeed())
+                if dests not in cost_so_far or new_cost<cost_so_far[dests]:
+                    frontier.put((new_cost+heuristic(net.getEdge(dests).getToNode().getID(),net.getEdge(goal).getToNode().getID(),graphmap),dests))
+                    came_from[dests] = current
+                    cost_so_far[dests] = new_cost
+    if goal_found:
+        path = []
+        current = goal
+        while current!=start:
+            path.append(current)
+            current = came_from[current]
+        path.append(start)
+        path.reverse()
+        return path
+    else:
+        return None
+
+
+def edge_cost(mapdata,edge):
+    maxprio = mapdata.maxprio
+    minprio = mapdata.minprio
+    

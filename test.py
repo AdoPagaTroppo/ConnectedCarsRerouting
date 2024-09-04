@@ -53,7 +53,12 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-b = np.load('test_behaviours.npy')
-plt.matshow(b[4])
-plt.colorbar()
+b = np.load('behaviors_Unisa_4.npy')
+map = MapData('Unisa')
+# plt.matshow(b[0])
+# plt.colorbar()
+id = 1965
+ed = map.edgelist[id]
+plt.title("PMF for edge "+str(ed.getID())+", destination Naples, Dijkstra algorithm")
+plt.plot(b[0][1965])
 plt.show()

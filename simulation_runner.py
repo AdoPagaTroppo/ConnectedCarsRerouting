@@ -10,12 +10,12 @@ CREATE_BEHAVIOURS = False
 RUN_SIMULATION = True
 NUM_ALGS = 4
 IMG_FOLDER = 'UnisaScenario_12h_noincident/'
-SCENARIO = 'Unisa'
+SCENARIO = 'Salerno'
 NUMBER_OF_CARS = 10
 NUM_AGENTS = 1
 USE_NUM_AGENTS = True
 PERC_AGENTS = 0.3
-TIME_HORIZON = 2 # keep around 5
+TIME_HORIZON = 4 # keep around 5
 SAVE_IMG = False
 SAVE_FILE = False
 
@@ -40,12 +40,12 @@ if RUN_SIMULATION:
     noise_std = []
     traveltimes_std = []
     x_axis = []
-    numberofsim = 1
+    numberofsim = [1]
     mapdata = MapData(SCENARIO)
-    if numberofsim<2:
+    if numberofsim[0]<2:
         if not USE_NUM_AGENTS:
             NUM_AGENTS = PERC_AGENTS*NUMBER_OF_CARS
-        retval,agents,arrived,sta,ssa,fa = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.05,False,True,12,PERC_AGENTS,mapdata,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=False,CONSIDER_WORKS=True)
+        retval,agents,arrived,sta,ssa,fa = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.05,True,True,12,PERC_AGENTS,mapdata,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=True,CONSIDER_WORKS=True)
         vehicle_speeds = []
         vehicle_fuelconsumptions = []
         vehicle_waitingtimes = []
@@ -92,8 +92,8 @@ if RUN_SIMULATION:
         print('SPEED TIME AVERAGE || SPEED SPACE AVERAGE || FLOW AVERAGE')
         print(str(sta)+' || '+str(ssa)+' || '+str(fa))
     else: 
-        repeatsim = 2
-        for i in range(numberofsim):
+        repeatsim = 5
+        for i in numberofsim:
             run_speed = []
             run_fuel = []
             run_waiting = []
@@ -104,7 +104,7 @@ if RUN_SIMULATION:
                 ssize = 0.1
                 if i == 0:
                     ssize = 1.0
-                retval,agents,arrived,sta,ssa,fa = single_sim(NUMBER_OF_CARS,1.0,False,TIME_HORIZON,ssize,True,True,12,0.1*(i),mapdata,False,i,NUM_ALGS=NUM_ALGS,ONLINE=True)
+                retval,agents,arrived,sta,ssa,fa = single_sim(NUMBER_OF_CARS,1.0,False,TIME_HORIZON,ssize,True,True,12,0.05*(i),mapdata,False,i,NUM_ALGS=NUM_ALGS,ONLINE=False,CONSIDER_WORKS=True)
                 vehicle_speeds = []
                 vehicle_fuelconsumptions = []
                 vehicle_waitingtimes = []
@@ -126,6 +126,14 @@ if RUN_SIMULATION:
                 run_waiting.append(np.mean(vehicle_waitingtimes))
                 run_co2.append(np.mean(vehicle_co2emissions))
                 run_travel.append(np.mean(vehicle_traveltimes))
+                if SAVE_FILE:
+                    np.save(IMG_FOLDER+"run"+str(i)+"_"+str(j)+"_"+str(NUMBER_OF_CARS)+'cars_'+str(TIME_HORIZON)+'hor_'+str(NUM_AGENTS)+'_agents_speeds.ny',vehicle_speeds)
+                    np.save(IMG_FOLDER+"run"+str(i)+"_"+str(j)+"_"+str(NUMBER_OF_CARS)+'cars_'+str(TIME_HORIZON)+'hor_'+str(NUM_AGENTS)+'_agents_fuelconsumption.ny',vehicle_fuelconsumptions)
+                    np.save(IMG_FOLDER+"run"+str(i)+"_"+str(j)+"_"+str(NUMBER_OF_CARS)+'cars_'+str(TIME_HORIZON)+'hor_'+str(NUM_AGENTS)+'_agents_noise.ny',vehicle_noiseemissions)
+                    np.save(IMG_FOLDER+"run"+str(i)+"_"+str(j)+"_"+str(NUMBER_OF_CARS)+'cars_'+str(TIME_HORIZON)+'hor_'+str(NUM_AGENTS)+'_agents_co2.ny',vehicle_co2emissions)
+                    np.save(IMG_FOLDER+"run"+str(i)+"_"+str(j)+"_"+str(NUMBER_OF_CARS)+'cars_'+str(TIME_HORIZON)+'hor_'+str(NUM_AGENTS)+'_agents_waiting.ny',vehicle_waitingtimes)
+                    np.save(IMG_FOLDER+"run"+str(i)+"_"+str(j)+"_"+str(NUMBER_OF_CARS)+'cars_'+str(TIME_HORIZON)+'hor_'+str(NUM_AGENTS)+'_agents_travel.ny',vehicle_traveltimes)
+        
             sp_avg = np.mean(run_speed)
             fuel_avg = np.mean(run_fuel)
             noise_avg = np.mean(run_noise)

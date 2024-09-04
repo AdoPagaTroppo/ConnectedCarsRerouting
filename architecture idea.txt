@@ -1,0 +1,4 @@
+Communication through traci parameters:
+Java code for on-vehicle application for work-in-progress area detection (when detecting wip change 'wip_area' parameter with value of wip edge)
+Java code for wip server, broadcasting for all vehicles
+Json file for connecting everything

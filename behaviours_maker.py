@@ -55,40 +55,50 @@ def valid_neighbors_lengths(edges,target=None):
 
 def index2alg(index):
     if index==0:
-        return 'dijkstra'
+        return 'e_dijkstra'
     if index==1:
-        return 'astar'
+        return 'e_astar'
     if index==2:
         return 'e_bfs'
     if index==3:
         return 'e_greedybfs'
     
-def index2path(j,target_edge,e,mapdata,dijkstrabased):
-    route = []
-    if j == 0:
-        route = traci.simulation.findRoute(e.getID(), target_edge).edges
-    elif j == 1:
-        route = traci.simulation.findRoute(e.getID(), target_edge, "routerByDistance").edges
-    else:
+def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
+        route = [] # if decomment return 1 tab
+    # if j == 0:
+    #     route = traci.simulation.findRoute(e.getID(), target_edge).edges
+    # elif j == 1:
+    #     route = traci.simulation.findRoute(e.getID(), target_edge, "routerByDistance").edges
+    # else:
         ext = None
         # route.append(e.getID())
         # ext = build_path(graphdict,e.getToNode().getID(),endnode,index2alg(j),graphmap=graphmap,connections=connections,edge=e.getID())
         # ext = build_path(mapdata,e.getToNode().getID(),endnode,index2alg(j),edge=e.getID())
-        if e.getID() in dijkstrabased:
-            ext1 = build_path(mapdata,e.getID(),target_edge,index2alg(j),forbidnode=dijkstrabased[e.getID()])
-            if ext1 is None:
-                ext2 = build_path(mapdata,e.getID(),target_edge,index2alg(j))
-                ext = ext2
-            else:
-                ext = ext1
-        else:
+        # if e.getID() in dijkstrabased and e.getID() in works:
+        #     ext1 = build_path(mapdata,e.getID(),target_edge,index2alg(j),forbidnode=dijkstrabased[e.getID()])
+        #     if ext1 is None:
+        #         ext2 = build_path(mapdata,e.getID(),target_edge,index2alg(j))
+        #         ext = ext2
+        #     else:
+        #         ext = ext1
+        # else:
+        if not works:
             ext = build_path(mapdata,e.getID(),target_edge,index2alg(j))
+        else:
+            print('you sure no work?')
+            if works:
+                if j<2:
+                    ext = build_path(mapdata,e.getID(),target_edge,index2alg(j))
+                else:
+                    ext = build_path(mapdata,e.getID(),target_edge,index2alg(j-2),forbidnode=works)
+                    if ext is None:
+                        ext = build_path(mapdata,e.getID(),target_edge,index2alg(j))
         if ext is None:
             route = None
         else:
             if 'SUCC' not in ext:
                 route.extend(ext)
-    return route
+        return route # if decomment return 1 tab
     
 def create_behaviours(num_algs,mapdata):
 
@@ -222,7 +232,7 @@ def create_behaviours(num_algs,mapdata):
     traci.close()
     np.save('behaviors_'+str(mapdata.scenario)+'_'+str(num_algs), behaviors)
     
-def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,behavior_created,colorpaths=False,colorprobs=False):
+def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,behavior_created,works,colorpaths=False,colorprobs=False):
     targets = mapdata.targets
     net = mapdata.net
     edge_list = mapdata.edgelist
@@ -250,8 +260,9 @@ def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,beh
             if (e.getID(),target_edge) not in behavior_created:
                 if e.getID() not in paths:
                     paths[e.getID()] = []
-                route = index2path(j,target_edge,e,mapdata,dijkstrabased)
-                paths[e.getID()].append(list(route))
+                route = index2path(j,target_edge,e,mapdata,dijkstrabased=dijkstrabased,works=works)
+                if len(paths[e.getID()])<num_algs:
+                    paths[e.getID()].append(list(route))
                 pmf = [0]*((len(edge_list)))
                 if route is None or len(route) ==0 : # edges are not connected 
                     for x in range(len(pmf)):
@@ -298,7 +309,8 @@ def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,beh
         
         for k in range(len(pmfs)):
             behaviors[i,k] = behaviors[i,k]+pmfs[k]
-            if np.sum(behaviors[i,k])>1:
-                print('WARNING HERE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')        
+            su = np.sum(behaviors[i,k])
+            if su>1:
+                print('WARNING HERE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA '+str(su))        
         i+=1
     return behaviors,paths

@@ -7,6 +7,8 @@ import traci
 class MapData():
     
     def __init__(self,scenario):
+        self.maxprio = 0
+        self.minprio = 100
         self.scenario = scenario
         traci.start(['sumo','-c','osm_'+str(scenario)+'.sumocfg','--step-length','1.0'])
         self.graphdict, self.graphmap, self.net, self.connections, self.edgegraph = build_graph(scenario)
@@ -21,10 +23,16 @@ class MapData():
         self.edge2target = {}
         for e in edge_list:
             if e.allows('passenger'):
+                prio = self.net.getEdge(e.getID()).getPriority()
+                if prio > self.maxprio:
+                    self.maxprio = prio
+                if prio < self.minprio:
+                    self.minprio = prio
                 self.edgelist.append(e)
                 self.edge2target[e.getID()] = {}
                 for t in self.targets:
                     self.edge2target[e.getID()][self.targets[t]] = (False,False,[])
+        print(len(self.edgelist)) 
         self.edge_dict = {}
 
         for e in self.edgelist:

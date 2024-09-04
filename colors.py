@@ -16,6 +16,17 @@ def car_color(type):
         return 0,0,255,1 # blue
     return 255,255,255,1
 
+def alg_color(type):
+    if type=='e_bfs':
+        return 255,0,255,1 # fucsia
+    elif type=='e_dijkstra':
+        return 0,255,0,1 # green
+    elif type=='e_greedybfs':
+        return 0,255,255,1 # azure
+    elif type=='e_astar':
+        return 255,255,0,1 # yellow
+    return 255,255,255,1
+
 def getIfromRGB(rgb):
     red = rgb[0]
     green = rgb[1]

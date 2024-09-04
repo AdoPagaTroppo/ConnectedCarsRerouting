@@ -18,16 +18,16 @@ def find_alternative(road,target,mapdata):
         for inced in fromnode_edges:
             edid = inced.getID()
             if net.getEdge(edid).allows('passenger'):
-                if edge.getID() in edgegraph[edid]:
+                if edge.getID() in edgegraph[edid] and edid not in returnroads:
                     vn = valid_neighbors(inced,mapdata,target)
                     if len(vn)==1:
                         returnroads.append(edid)
                         explore.put(edid)
-                    # else:
-                    #     vn2 = valid_neighbors(inced,mapdata,target,road)
-                    #     if len(vn2)==1:
-                    #         returnroads.append(edid)
-                    #         explore.put(edid)
+                    else:
+                        vn2 = valid_neighbors(inced,mapdata,target,road)
+                        if len(vn2)==1:
+                            returnroads.append(edid)
+                            explore.put(edid)
         # print('exploring')
     return returnroads
     
@@ -35,7 +35,8 @@ def find_alternative(road,target,mapdata):
 def tweet(works,road,vehs,end_edge,mapdata,agent,vehicle,LANG,THRESHOLD):
     prevval = works[road]
     works[road] += (10 if agent else 2)*vehicle.influence
-    colorworks = True
+    colorworks = False
+    # print(str(works[road])+' '+str(prevval)+' '+str(vehicle.influence))
     if works[road]>=THRESHOLD and prevval<THRESHOLD:
         for v in vehs:
             if v.__contains__('agent'):
@@ -44,10 +45,11 @@ def tweet(works,road,vehs,end_edge,mapdata,agent,vehicle,LANG,THRESHOLD):
                     vehs[v].weightened[r] = len(roadsequence)
                 # vehs[v].weightened.extend(roadsequence)
                 if colorworks:
-                    traci.edge.setParameter(road,'color',100000)
                     for r in roadsequence:
-                        traci.edge.setParameter(r,'color',100000)
+                        traci.edge.setParameter(r,'color',10)
                 if PLAY_AUDIO and road not in workAudioPlayed:
                     playWarningAudio(mapdata,road,roadsequence,LANG)
                     workAudioPlayed.append(road)
                 print(roadsequence)
+        return True
+    return False

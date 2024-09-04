@@ -5,6 +5,7 @@ class VehicleData:
         self.id = id
         self.alg = alg
         self.speeds = []
+        self.selected_id = 0
         self.dist = 0
         self.dest = dest
         self.depart = int(depart)
