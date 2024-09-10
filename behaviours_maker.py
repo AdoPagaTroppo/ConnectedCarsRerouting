@@ -232,7 +232,7 @@ def create_behaviours(num_algs,mapdata):
     traci.close()
     np.save('behaviors_'+str(mapdata.scenario)+'_'+str(num_algs), behaviors)
     
-def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,behavior_created,works,colorpaths=False,colorprobs=False):
+def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,behavior_created,works,toupdate=False,colorpaths=False,colorprobs=False):
     targets = mapdata.targets
     net = mapdata.net
     edge_list = mapdata.edgelist
@@ -257,8 +257,8 @@ def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,beh
     for j in range(num_algs):
         pmfs = np.zeros((len(edge_list), len(edge_list)))
         for e in ss_edges:
-            if (e.getID(),target_edge) not in behavior_created:
-                if e.getID() not in paths:
+            if (e.getID(),target_edge) not in behavior_created or toupdate:
+                if (e.getID() not in paths) or (j==0):
                     paths[e.getID()] = []
                 route = index2path(j,target_edge,e,mapdata,dijkstrabased=dijkstrabased,works=works)
                 if len(paths[e.getID()])<num_algs:
@@ -308,6 +308,8 @@ def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,beh
                 # print([x for x in pmf if x!=0])
         
         for k in range(len(pmfs)):
+            if toupdate:
+                behaviors[i,k] = np.zeros(len(edge_list))
             behaviors[i,k] = behaviors[i,k]+pmfs[k]
             su = np.sum(behaviors[i,k])
             if su>1:

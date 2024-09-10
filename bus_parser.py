@@ -130,6 +130,20 @@ def lineend(source,direction,additional=None):
         return "-160827513#0" if direction=='to' else "160827513#0"
     elif source.__contains__('015'):
         return "-160827520#1" if direction=='to' else "160827520#1"
+    elif source.__contains__('018'):
+        return "671510078#4" if direction=='to' else "-671510078#4"
+    elif source.__contains__('019'):
+        return "-714367012#1" if direction=='to' else "714367012#0"
+    elif source.__contains__('022'):
+        return "50827474" if direction=='to' else "-567101152"
+    elif source.__contains__('025'):
+        return "671510078#4" if direction=='to' else "-108541471"
+    elif source.__contains__('026'):
+        return "-1254342108" if direction=='to' else "101546296"
+    elif source.__contains__('039'):
+        return "124075783#1" if direction=='to' else "-124075783#1"
+    elif source.__contains__('050'):
+        return "102235300#2" if direction=='to' else "-102235300#2"
 
 def calculate_counter(starttime,giventime,notuni=False):
     givsplit = giventime.split(':')

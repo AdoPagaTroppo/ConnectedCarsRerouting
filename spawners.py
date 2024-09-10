@@ -60,7 +60,8 @@ def spawnUncontrolledCars(num_uncontrolled,mapdata):
     i = 0
     j = 0
     for c in range(int(num_uncontrolled)):
-        source = random.choices(sources)[0]
+        # source = random.choices(sources)[0]
+        source = '93450829' #'766350967'
         # dest = random.choices(destinations,target_weights)[0]
         dest = destinations[0]
         id = 'veh'+str(c+1)+'_'+str(dest[1])
@@ -69,11 +70,7 @@ def spawnUncontrolledCars(num_uncontrolled,mapdata):
         # paths['route'+str(c+1)] = traci.simulation.findRoute(net.getEdge(pathbuilt[0]).getID(),net.getEdge(pathbuilt[-1]).getID()).edges
         # route = traci.simulation.findRoute(net.getEdge(pathbuilt[0]).getID(),net.getEdge(pathbuilt[-1]).getID()).edges
         route = traci.simulation.findRoute(source,dest[0]).edges
-        pathlen = 0
-        for e in route:
-            pathlen += net.getEdge(e).getLength()/net.getEdge(e).getSpeed()
-        print('uncontr pathlen '+str(pathlen)+' source '+str(source))
-        vehs[id] = VehicleData(id,'route'+str(c+1),i,dest[1])
+        vehs[id] = VehicleData(id,'route'+str(c+1),i,dest[1],route)
         traci.route.add(routeid,route)
         traci.vehicle.add(id,routeid,'Car_AGENT',str(i))
         traci.vehicle.setSpeed(id,-1)
@@ -89,15 +86,18 @@ def spawnUncontrolledCars(num_uncontrolled,mapdata):
     #     j += 1
     return vehs
 
-def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,online):
+def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,online,agent_start=None):
     destinations = mapdata.destinations
     targets = mapdata.targets
+    sources = mapdata.sources
     target_weights = mapdata.target_weights
     scenario = mapdata.scenario
-    start_edge = '-579690548#1' if scenario=='Unisa' else '766350967'
+    # start_edge = ('-579690548#1' if scenario=='Unisa' else '766350967') if agent_start is None else agent_start
     # start_edge = '93216752#1'
     # start_edge = '486603222'
     # start_edge = '50702261#2'
+    # start_edge = '668814536#4'
+    start_edge = '93450829'
     end_edge = {}
     agents = {}
     for i in range(int(NUM_AGENTS)):
