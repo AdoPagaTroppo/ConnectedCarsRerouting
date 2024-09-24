@@ -1,5 +1,6 @@
 import numpy as np
 import traci
+import math
 
 def car_color(type):
     if type=='NAPOLI':
@@ -44,8 +45,8 @@ def colorMap(r,mapdata,rewards4colors,end_edge):
     vals = list(rewards4colors.values())
     sumvals = np.sum(vals)
     if sumvals!=0:
-        maxre4 = np.max(vals[vals!=0])
-        minre4 = np.min(vals[vals!=0])
+        maxre4 = np.max(vals)
+        minre4 = np.min(vals)
     maxr = 0
     minr = 0
     if sumvals!=0:
@@ -60,11 +61,19 @@ def colorMap(r,mapdata,rewards4colors,end_edge):
     for edgeindex in range(len(edgelist)):
         colors = list(car_color(list(targets.keys())[list(targets.values()).index(end_edge)]))[0:3]
         ed = edgelist[edgeindex].getID()
-        rvalue = r[edgeindex] if r[edgeindex]!=0 else minr
+        rvalue = minr
+        colorvalue = 0
         if r[edgeindex]!=0:
             rewards4colors[ed] = r[edgeindex]
-        rvalue = rewards4colors[ed] if ed in rewards4colors and rewards4colors[ed]!=0 else minr
-        for c in range(len(colors)):
-            colors[c] = int(colors[c]*abs(rvalue-minr)/abs(maxr-minr))
-        colorvalue = getIfromRGB(colors)
+            rvalue = rewards4colors[ed]
+            colorvalue = int(abs(rvalue-minr)/abs(maxr-minr)*1000)+10
+        else:
+            if ed in rewards4colors:
+                if sumvals!=0 and maxre4!=minre4:
+                    diffvalue = abs(rewards4colors[ed]-minre4)/abs(maxre4-minre4)*abs(maxr-minr)
+                    rewards4colors[ed] = diffvalue+minr
+                    colorvalue = int(diffvalue/abs(maxr-minr)*1000)+10
+        # for c in range(len(colors)):
+        #     colors[c] = int(colors[c]*abs(rvalue-minr)/abs(maxr-minr))
+        # colorvalue = getIfromRGB(colors)
         traci.edge.setParameter(ed,'color',colorvalue)
