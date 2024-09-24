@@ -9,16 +9,16 @@ from plots import elaborate_and_make_plots
 CREATE_BEHAVIOURS = False
 RUN_SIMULATION = True
 NUM_ALGS = 4
-# IMG_FOLDER = 'UnisaScenario_12h_noincident/'
-IMG_FOLDER = 'data4plots/testdata5/'
+IMG_FOLDER = 'SalernoScenario_12h_incident/'
+# IMG_FOLDER = 'data4plots/testdata5/'
 SCENARIO = 'Salerno'
-NUMBER_OF_CARS = 10
+NUMBER_OF_CARS = 20
 NUM_AGENTS = 1
-USE_NUM_AGENTS = True
+USE_NUM_AGENTS = False
 PERC_AGENTS = 0.3
 TIME_HORIZON = 4 # keep around 5
 SAVE_IMG = False
-SAVE_FILE = False
+SAVE_FILE = True
 
 if CREATE_BEHAVIOURS:
     create_behaviours(NUM_ALGS,MapData(SCENARIO))
@@ -41,8 +41,8 @@ if RUN_SIMULATION:
     noise_std = []
     traveltimes_std = []
     x_axis = []
-    # numberofsim = range(0,6)
-    numberofsim = [1]
+    numberofsim = range(0,21)
+    # numberofsim = [1]
     mapdata = MapData(SCENARIO)
     if len(numberofsim)<2:
         i = 0
@@ -148,9 +148,14 @@ if RUN_SIMULATION:
         print('SPEED TIME AVERAGE || SPEED SPACE AVERAGE || FLOW AVERAGE')
         print(str(sta)+' || '+str(ssa)+' || '+str(fa))
     else: 
-        repeatsim = 1
+        repeatsim = 3
+        start = 0
         step_perc = 1/max(numberofsim)
         for i in numberofsim:
+            # if i==14:
+            #     start = 1
+            # else:
+            #     start = 0
             run_speed = []
             run_fuel = []
             run_waiting = []
@@ -160,8 +165,8 @@ if RUN_SIMULATION:
             if not USE_NUM_AGENTS:
                 NUM_AGENTS = step_perc*i*NUMBER_OF_CARS
         
-            for j in range(repeatsim):
-                ssize = 0.1
+            for j in range(start,repeatsim):
+                ssize = 0.05
                 if i == 0:
                     ssize = 1.0
                 retval,agents,arrived,sta,ssa,fa,atd,ftd = single_sim(NUMBER_OF_CARS,1.0,False,TIME_HORIZON,ssize,True,True,12,step_perc*(i),mapdata,False,i,NUM_ALGS=NUM_ALGS,ONLINE=True,CONSIDER_WORKS=True)
@@ -199,7 +204,7 @@ if RUN_SIMULATION:
                             agent_co2emissions.append(r[7])
                             agent_noiseemissions.append(r[6])
                             agent_traveltimes.append(r[8])
-                        else:
+                        elif (not r[0].__contains__('random') and not r[0].__contains__('bus')):
                             foes_speeds.append(r[2])
                             foes_fuelconsumptions.append(r[4])
                             foes_waitingtimes.append(r[5])

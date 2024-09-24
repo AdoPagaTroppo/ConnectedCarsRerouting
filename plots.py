@@ -9,10 +9,11 @@ def remove_errors(payload):
 def elaborate_and_make_plots(TIMEDATA=False):
 
     SAVE_IMG=True
-    IMG_FOLDER = 'data4plots/img2/'
-    DATA_SOURCE = 'data4plots/testdata5/'
+    IMG_FOLDER = 'img/'
+    DATA_SOURCE = 'SalernoScenario_12h_incident/'
 
     filelist = os.listdir(DATA_SOURCE)
+    print(filelist)
     if not TIMEDATA:
         filelist = [x for x in filelist if not x.__contains__('_timedata')]
         example_name = os.listdir(DATA_SOURCE)[0].split('.')[0].split('_')
@@ -103,8 +104,8 @@ def elaborate_and_make_plots(TIMEDATA=False):
                 for par in range(numberofparams):
                     f = filelist[par+numberofparams*sim+numberofparams*numberofsim*run]
                     fil = DATA_SOURCE+f
-                    f_name = fil.split('_')
-                    runfile = int(f_name[0].replace(DATA_SOURCE+'run',''))
+                    f_name = fil.split('/')[1].split('_')
+                    runfile = int(f_name[0].replace('run',''))
                     f_name[6] = f_name[6].replace('.ny.npy','')
                     print(f_name)
                     if f_name[6].startswith('agent'):
@@ -272,8 +273,8 @@ def elaborate_and_make_plots(TIMEDATA=False):
         foes_fuel = None
         for f in filelist:
             fil = DATA_SOURCE+f
-            f_name = fil.split('_')
-            runfile = int(f_name[0].replace(DATA_SOURCE+'run',''))
+            f_name = fil.split('/')[1].split('_')
+            runfile = int(f_name[0].replace('run',''))
             f_name[6] = f_name[6].replace('.ny.npy','').replace('timedata','')
             payload = np.load(fil)
             if f_name[6].startswith('agent'):
