@@ -134,6 +134,7 @@ def compute_reward(ss,passed,mapdata,target_edge,works,vehicle):
         r[i] = -pathlen+10*density+repeat_in_path+road_repeat+waitingtime # product between speed and density to define dependency between density and car speeds
         # r[i] = 5*roadspeed*density+road_repeat+road_in_wip # product between speed and density to define dependency between density and car speeds
         # print('reward edge '+str(edid)+': '+str(pathlen)+' + '+str(roadspeed)+' + '+str(5*roadspeed*density)+str(repeat_in_path)+' + '+str(road_repeat)+' = '+str(r[i]))
+        # print('reward edge '+str(edid)+': '+str(pathlen)+' + '+str(roadspeed)+' + '+str(5*roadspeed*density)+str(repeat_in_path)+' + '+str(road_repeat)+' = '+str(r[i]))
         # r[i] = -pathlen-(1000000 if edid in works else 0)-(70/totrepeat+100*(passed[edid]-1) if edid in passed else 0)
         # print('edge '+str(edid)+' reward '+str(r[i]))
         # da aggiungere un aggiornamento di costo tenendo conto di comunicazione e interfacciamento con social + fiducia + nnumero di persone che twittano stessa cosa
@@ -155,6 +156,17 @@ def update_works(works):
         if id not in works and id not in ret_works and len(id)>1:
             ret_works.append(id)
     return ret_works
+
+def load_offline_paths(scenario,num_algs,consider_works):
+    data_structure = np.load('paths_'+str(scenario)+'_'+str(num_algs)+('_wip' if consider_works else '')+'.npy',allow_pickle=True)
+    # print(data_structure)
+    paths = {}
+    for i in data_structure.item():
+        # print(i)
+        paths[i] = data_structure.item()[i]
+        # print(data_structure.item()[i])
+        # print('end')
+    return paths
 
 DIJKSTRA_BASED_REROUTING = False
 
@@ -207,8 +219,9 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     colorstreet = False
     colorreward = False
     colorpaths = False
+    colorpaths = False
     rewards4colors = {}
-    paths_db = {}
+    paths_db = {} if ONLINE else load_offline_paths(SCENARIO,NUM_ALGS,CONSIDER_WORKS)
     agent_co2s = []
     agent_fuels = []
     agent_noises = []
@@ -329,10 +342,13 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         if ONLINE and ((currentid,end_edge[vehicle]) not in behaviour_created or len(signalled_works)!=prev_signalled_works):
                                 behaviour_db,paths = online_create_behaviours(mapdata,NUM_ALGS,end_edge[vehicle],ss_edges,behaviour_db,behaviour_created,signalled_works,len(signalled_works)!=prev_signalled_works)
                                 for p in paths:
-                                    paths_db[p] = paths[p]
+                                    if p not in paths_db:
+                                        paths_db[p] = [None]*len(targets)
+                                    paths_db[p][agents[vehicle].targetIndex] = paths[p]
                                 for v in ss_edges:
                                     if (v.getID(),end_edge[vehicle]) not in behaviour_created or len(signalled_works)!=prev_signalled_works:
                                         behaviour_created.append((v.getID(),end_edge[vehicle]))
+                                prev_signalled_works = len(signalled_works)
                               
                         if len(vn)>2:
                             # print(vehicle)
@@ -351,17 +367,22 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                 #         traci.edge.setParameter(e.getID(),'color',1000000)
                             new_state,indmin = agents[vehicle].receding_horizon_DM(statecars,T_HORIZON,ss,r,ONLINE,behaviour_db,edgelist)
                             prox_edge = edgelist[new_state]
-                            if paths is not None and indmin>=0:
-                                selpath = paths[currentid][indmin]
-                                vehs[vehicle].selected_id = indmin
+                            if ONLINE:
+                                if paths is not None and indmin>=0:
+                                    selpath = paths[currentid][indmin]
+                                    vehs[vehicle].selected_id = indmin
+                            else:
+                                if indmin>=0:
+                                    selpath = paths_db[currentid][agents[vehicle].targetIndex+indmin]
+                                    vehs[vehicle].selected_id = indmin
                         elif len(vn)==2:
                             prox_edge = vn[1]
                             indmin = vehs[vehicle].selected_id
-                            selpath = paths_db[currentid][indmin]
+                            selpath = paths_db[currentid][agents[vehicle].targetIndex+indmin]
                         else:
                             prox_edge = vn[0]
                             indmin = vehs[vehicle].selected_id
-                            selpath = paths_db[currentid][indmin]
+                            selpath = paths_db[currentid][agents[vehicle].targetIndex+indmin]
                     if len(vn2)>2:
                         if NUM_AGENTS==1 and currentid==roadid and PLAY_AUDIO:
                             playAudio(mapdata,currentid,prox_edge,LANG)
@@ -383,11 +404,12 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                             if stre.getID() not in works:
                                 traci.edge.setParameter(stre.getID(),'color',0)
                         if colorpaths:
-                            for selpat in range(len(paths_db[currentid])):
+                            for selpat in range(NUM_ALGS): # range(len(paths_db[currentid])):
                                 colorv = getIfromRGB(list(alg_color(index2alg(selpat)))[0:3])
                                 # print(paths[currentid][selpat])
                                 pathlen = 0
-                                for e in paths_db[currentid][selpat]:
+                                # print(paths_db[currentid][agents[vehicle].targetIndex][selpat])
+                                for e in paths_db[currentid][agents[vehicle].targetIndex+selpat]:
                                     # pathlen += net.getEdge(e).getLength()
                                     # pathlen += traci.edge.getTraveltime(e)
                                     pathlen += net.getEdge(e).getLength()/net.getEdge(e).getSpeed()

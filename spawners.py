@@ -93,6 +93,7 @@ def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,online,agent_start=None
     target_weights = mapdata.target_weights
     scenario = mapdata.scenario
     start_edge = ('-579690548#1' if scenario=='Unisa' else '766350967') if agent_start is None else agent_start
+    start_edge = ('-579690548#1' if scenario=='Unisa' else '766350967') if agent_start is None else agent_start
     # start_edge = '93216752#1'
     # start_edge = '486603222'
     # start_edge = '50702261#2'
@@ -102,7 +103,7 @@ def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,online,agent_start=None
     for i in range(int(NUM_AGENTS)):
         # destt = random.choices(destinations,target_weights)[0]
         # destt = destinations[i%len(destinations)]
-        destt = destinations[0]
+        destt = destinations[5]
         dest = destt[0]
         agentid = 'agent'+str(i)+'_'+str(destt[1])
         agrouteid = agentid+'_route'

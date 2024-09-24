@@ -199,7 +199,7 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
     return route # if decomment return 1 tab
 
     
-def create_behaviours(num_algs,mapdata):
+def create_behaviours(num_algs,mapdata,consider_works=False):
 
     if 'SUMO_HOME' in os.environ:
         tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
@@ -220,8 +220,9 @@ def create_behaviours(num_algs,mapdata):
     print("Starting SUMO...")
 
     behaviors = np.zeros((len(targets)*num_algs, len(edge_list), len(edge_list)))
-
+    works = mapdata.works if consider_works else {}
     i=0
+    paths = {}
     for t in targets:
         pmfs = np.zeros((len(edge_list), len(edge_list)))
         dijkstrabased = {}
@@ -229,7 +230,14 @@ def create_behaviours(num_algs,mapdata):
         for j in range(num_algs):
             pmfs = np.zeros((len(edge_list), len(edge_list)))
             for e in edge_list:
-                route = index2path(j,target_edge,e,mapdata,dijkstrabased)
+                if (e.getID() not in paths):
+                    paths[e.getID()] = []
+                route = index2path(j,target_edge,e,mapdata,dijkstrabased=dijkstrabased,works=works)
+                if len(paths[e.getID()])<num_algs*len(targets):
+                    if route is None:
+                        paths[e.getID()].append(None)
+                    else:    
+                        paths[e.getID()].append(list(route))
                 pmf = [0]*((len(edge_list)))
                 if route is None or len(route) ==0 : # edges are not connected 
                     for x in range(len(pmf)):
@@ -329,7 +337,8 @@ def create_behaviours(num_algs,mapdata):
             # i+=1
     print("Behaviors generated!")
     traci.close()
-    np.save('behaviors_'+str(mapdata.scenario)+'_'+str(num_algs), behaviors)
+    np.save('behaviors_'+str(mapdata.scenario)+'_'+str(num_algs)+('_wip' if consider_works else ''), behaviors)
+    np.save('paths_'+str(mapdata.scenario)+'_'+str(num_algs)+('_wip' if consider_works else ''), paths)
     
 def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,behavior_created,works,toupdate=False,colorpaths=False,colorprobs=False):
     targets = mapdata.targets
@@ -405,7 +414,6 @@ def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,beh
                         
                 pmfs[edge_dict[e.getID()]] = pmf
                 # print([x for x in pmf if x!=0])
-        
         for k in range(len(pmfs)):
             if toupdate and edge_list[k] in ss_edges:
                 behaviors[i,k] = np.zeros(len(edge_list))
