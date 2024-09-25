@@ -9,10 +9,11 @@ def remove_errors(payload):
 def elaborate_and_make_plots(TIMEDATA=False):
 
     SAVE_IMG=True
-    IMG_FOLDER = 'data4plots/img2/'
-    DATA_SOURCE = 'data4plots/testdata5/'
+    IMG_FOLDER = 'img_pathlen_roadspeeddensity_waiting_n/'
+    DATA_SOURCE = 'SalernoScenario_12h_incident_n/'
 
     filelist = os.listdir(DATA_SOURCE)
+    print(filelist)
     if not TIMEDATA:
         filelist = [x for x in filelist if not x.__contains__('_timedata')]
         example_name = os.listdir(DATA_SOURCE)[0].split('.')[0].split('_')
@@ -39,7 +40,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
         step_perc = 0.1 # 1/(numberofruns-1)
         x_axis = []
         for i in range(numberofruns):
-            x_axis.append(step_perc*i*NUMBER_OF_CARS)
+            x_axis.append(step_perc*i*100)
 
         print(x_axis)
         speedsplot = [0]*numberofruns
@@ -103,8 +104,8 @@ def elaborate_and_make_plots(TIMEDATA=False):
                 for par in range(numberofparams):
                     f = filelist[par+numberofparams*sim+numberofparams*numberofsim*run]
                     fil = DATA_SOURCE+f
-                    f_name = fil.split('_')
-                    runfile = int(f_name[0].replace(DATA_SOURCE+'run',''))
+                    f_name = fil.split('/')[1].split('_')
+                    runfile = int(f_name[0].replace('run',''))
                     f_name[6] = f_name[6].replace('.ny.npy','')
                     print(f_name)
                     if f_name[6].startswith('agent'):
@@ -130,7 +131,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
                             print( np.load(fil))
                             sim_travel_agent.append(payload)
                         elif f_name[6].endswith('waiting'):
-                            sim_waiting_agent.append(payload)
+                            sim_waiting_agent.append(payload*0.005)
                     elif f_name[6].startswith('foe'):
                         print('is foe')
                         payload = np.load(fil)
@@ -154,7 +155,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
                             print( np.load(fil))
                             sim_travel_foe.append(payload)
                         elif f_name[6].endswith('waiting'):
-                            sim_waiting_foe.append(payload)
+                            sim_waiting_foe.append(payload*0.005)
                     else:
                         print('is generic')
                         payload = np.load(fil)
@@ -179,7 +180,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
                             print( np.load(fil))
                             sim_travel.append(payload)
                         elif f_name[6].endswith('waiting'):
-                            sim_waiting.append(payload)
+                            sim_waiting.append(payload*0.005)
             if len(sim_speeds_agent)==0:
                 sim_speeds_agent.append(0)
             if len(sim_fuel_agent)==0:
@@ -247,19 +248,19 @@ def elaborate_and_make_plots(TIMEDATA=False):
             
         print(speedsplot)
             
-        plotter.plotter(x_axis,speedsplot,speedsplot_std,'Average speed',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.plotter(x_axis,fuels,fuels_std,'Fuel consumption',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.plotter(x_axis,waitingtimes,waitingtimes_std,'Waiting times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.plotter(x_axis,noise,noise_std,'Noise emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.plotter(x_axis,co2em,co2em_std,'CO2 emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.plotter(x_axis,traveltimes,traveltimes_std,'Travel times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        plotter.plotter(x_axis,speedsplot,speedsplot_std,'speed',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[m/s]')
+        plotter.plotter(x_axis,fuels,fuels_std,'fuel consumption',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[mg/s]')
+        plotter.plotter(x_axis,waitingtimes,waitingtimes_std,'waiting times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[s]')
+        plotter.plotter(x_axis,noise,noise_std,'noise emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[dbA]')
+        plotter.plotter(x_axis,co2em,co2em_std,'CO2 emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[mg/s]')
+        plotter.plotter(x_axis,traveltimes,traveltimes_std,'travel times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[s]')
         
-        plotter.versus_plotter(x_axis,agentspeedsplot,agentspeedsplot_std,foespeedsplot,foespeedsplot_std,'Average speed',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.versus_plotter(x_axis,agentfuels,agentfuels_std,foefuels,foefuels_std,'Fuel consumption',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.versus_plotter(x_axis,agentwaitingtimes,agentwaitingtimes_std,foewaitingtimes,foewaitingtimes_std,'Waiting times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.versus_plotter(x_axis,agentnoise,agentnoise_std,foenoise,foenoise_std,'Noise emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        plotter.versus_plotter(x_axis,agentspeedsplot,agentspeedsplot_std,foespeedsplot,foespeedsplot_std,'speed',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        plotter.versus_plotter(x_axis,agentfuels,agentfuels_std,foefuels,foefuels_std,'fuel consumption',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        plotter.versus_plotter(x_axis,agentwaitingtimes,agentwaitingtimes_std,foewaitingtimes,foewaitingtimes_std,'waiting times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        plotter.versus_plotter(x_axis,agentnoise,agentnoise_std,foenoise,foenoise_std,'noise emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
         plotter.versus_plotter(x_axis,agentco2em,agentco2em_std,foeco2em,foeco2em_std,'CO2 emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.versus_plotter(x_axis,agenttraveltimes,agenttraveltimes_std,foetraveltimes,foetraveltimes_std,'Travel times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        plotter.versus_plotter(x_axis,agenttraveltimes,agenttraveltimes_std,foetraveltimes,foetraveltimes_std,'travel times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
     else:
         filelist = [x for x in filelist if x.__contains__('_timedata')]
         NUMBER_OF_CARS = 10
@@ -272,8 +273,8 @@ def elaborate_and_make_plots(TIMEDATA=False):
         foes_fuel = None
         for f in filelist:
             fil = DATA_SOURCE+f
-            f_name = fil.split('_')
-            runfile = int(f_name[0].replace(DATA_SOURCE+'run',''))
+            f_name = fil.split('/')[1].split('_')
+            runfile = int(f_name[0].replace('run',''))
             f_name[6] = f_name[6].replace('.ny.npy','').replace('timedata','')
             payload = np.load(fil)
             if f_name[6].startswith('agent'):

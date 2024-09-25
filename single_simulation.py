@@ -41,13 +41,15 @@ def neighbor_edges(edge, graphdict, connections, net, edgelist):
     for e in (n1.getIncoming()+n1.getOutgoing()):
         if e.allows('passenger') and not e.getID().__contains__(':'):
             if e.getID()!=edge.getID() and connection_exists(edge.getFromNode().getID(),e.getFromNode().getID(),e.getToNode().getID(),graphdict,connections):
-                res.append(edgelist.index(e))
+                res.append(e)
+                # res.append(edgelist.index(e))
     #get all the incoming and outgoing edges of the starting node
     n2 = edge.getFromNode()
     for e in (n2.getIncoming()+n2.getOutgoing()):
         if e.allows('passenger') and not e.getID().__contains__(':'):
             if e.getID()!=edge.getID() and connection_exists(edge.getFromNode().getID(),e.getFromNode().getID(),e.getToNode().getID(),graphdict,connections):
-                res.append(edgelist.index(e))
+                res.append(e)
+                # res.append(edgelist.index(e))
     return(res)
 
 def state_space(n_node, tHor,mapdata,target):
@@ -58,7 +60,7 @@ def state_space(n_node, tHor,mapdata,target):
         newSpace = stsp.copy()
         for n in stsp:
             ed = edgelist[n]
-            for x in valid_neighbors(ed,mapdata,target):
+            for x in valid_neighbors(ed,mapdata,target,checkIngoing=True):
             # for x in neighbor_edges(ed,graphdict,connections,net,edgelist):
                 xid = edgelist.index(x)
                 if xid not in newSpace:
@@ -87,21 +89,18 @@ def compute_reward(ss,passed,mapdata,target_edge,works,vehicle):
         # path = traci.simulation.findRoute(edid,target_edge,'routerByDistance').edges
         path = build_path(mapdata,edid,target_edge,'e_dijkstra')
         pathlen = 0
-        for j in path:
-            if j!='SUCC':
-                # pathlen += traci.edge.getTraveltime(j)*(1 if j not in works else 10) # keep track of signalled wip areas
-                pathlen += net.getEdge(j).getLength()/net.getEdge(j).getSpeed()*(1 if j not in works else worksweight)
-        if edid not in works:
+        if path is not None and len(path)!=0:
+            pathlen = calculate_pathlen(path,works,mapdata)
+        else:
+            pathlen = math.inf
+        if edid not in works and path is not None:
             path2 = build_path(mapdata,edid,target_edge,'e_dijkstra',forbidnode=works)
             pathlen2 = 0
-            for j in path2:
-                if j!='SUCC':
-                    # pathlen += traci.edge.getTraveltime(j)*(1 if j not in works else 10) # keep track of signalled wip areas
-                    pathlen2 += net.getEdge(j).getLength()/net.getEdge(j).getSpeed()
-            # print('pathlen1 '+str(pathlen)+' pathlen2 '+str(pathlen2))
-            if pathlen2<=pathlen:
-                path = path2
-                pathlen = pathlen2
+            if path2 is not None and len(path2)!=0:
+                pathlen2 = calculate_pathlen(path2,works,mapdata)
+                if pathlen2<=pathlen:
+                    path = path2
+                    pathlen = pathlen2
         # print('edge '+str(edid)+' distance '+str(pathlen))
         traveltime = -traci.edge.getTraveltime(edid)
         veh_num = -traci.edge.getLastStepVehicleNumber(edid)
@@ -121,10 +120,13 @@ def compute_reward(ss,passed,mapdata,target_edge,works,vehicle):
             tail_in_wip = -worksweight*veh_num/vehicle.weightened[edid]
         lastspeed = traci.edge.getLastStepMeanSpeed(edid)
         roadspeed = -(net.getEdge(edid).getSpeed()-lastspeed)
+        waitingtime = -traci.edge.getWaitingTime(edid)
         # r[i] = traveltime+veh_num+road_in_wip+road_repeat+tail_in_wip-pathlen-10*density+roadspeed+pred_works
         # r[i] = 1
-        r[i] = -pathlen+roadspeed+5*roadspeed*density+repeat_in_path+road_repeat # product between speed and density to define dependency between density and car speeds
+        r[i] = -pathlen+roadspeed*density+repeat_in_path+road_repeat+10*waitingtime # product between speed and density to define dependency between density and car speeds
+        # r[i] = -pathlen+density+repeat_in_path+road_repeat+waitingtime # product between speed and density to define dependency between density and car speeds
         # r[i] = 5*roadspeed*density+road_repeat+road_in_wip # product between speed and density to define dependency between density and car speeds
+        # print('reward edge '+str(edid)+': '+str(pathlen)+' + '+str(roadspeed)+' + '+str(5*roadspeed*density)+str(repeat_in_path)+' + '+str(road_repeat)+' = '+str(r[i]))
         # print('reward edge '+str(edid)+': '+str(pathlen)+' + '+str(roadspeed)+' + '+str(5*roadspeed*density)+str(repeat_in_path)+' + '+str(road_repeat)+' = '+str(r[i]))
         # r[i] = -pathlen-(1000000 if edid in works else 0)-(70/totrepeat+100*(passed[edid]-1) if edid in passed else 0)
         # print('edge '+str(edid)+' reward '+str(r[i]))
@@ -159,6 +161,17 @@ def load_offline_paths(scenario,num_algs,consider_works):
         # print('end')
     return paths
 
+def calculate_pathlen(path,works,mapdata):
+    worksweight = 20
+    net = mapdata.net
+    pathlen = 0
+    for j in path:
+        if j!='SUCC':
+            # pathlen += traci.edge.getTraveltime(j)*(1 if j not in works else 10) # keep track of signalled wip areas
+            pathlen += net.getEdge(j).getLength()/net.getEdge(j).getSpeed()*(1 if j not in works else worksweight)
+    return pathlen
+    
+
 DIJKSTRA_BASED_REROUTING = False
 
 
@@ -177,7 +190,8 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     edgelist = mapdata.edgelist
     destinations = mapdata.destinations
     checkpoints = parse_file_for_checkpoints(str(SCENARIO)+'ScenarioData/checkpoints.txt')
-    vehs = spawnUncontrolledCars(int((PERC_UNI_CARS-PERC_AGENT_CARS)*NUM_VEHICLES),mapdata)
+    NUM_FOES = NUM_VEHICLES-NUM_AGENTS
+    vehs = spawnUncontrolledCars(int(NUM_FOES),mapdata)
     agents,end_edge = spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,ONLINE)
     print('loaded vehicles')
     totarrived = 0
@@ -206,9 +220,19 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     passed = {}
     behaviour_created = []
     behaviour_db = np.zeros((len(targets)*NUM_ALGS, len(edgelist), len(edgelist)))
-    colorstreet = True
-    colorreward = False
-    colorpaths = False
+    checkfromfile = True
+    colorpars = []
+    try:
+        f = open('sim_config.txt','r')
+        colorparams = f.readline()
+        f.close()
+        colorpars = colorparams.split(';')
+    except:
+        checkfromfile = False
+    colorstreet = False if not checkfromfile else eval(colorpars[2])
+    colorreward = False if not checkfromfile else eval(colorpars[4])
+    colorpaths = False if not checkfromfile else eval(colorpars[3])
+    print(str(colorstreet)+' '+str(colorreward)+' '+str(colorpaths))
     rewards4colors = {}
     paths_db = {} if ONLINE else load_offline_paths(SCENARIO,NUM_ALGS,CONSIDER_WORKS)
     agent_co2s = []
@@ -218,13 +242,17 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     foes_fuels = []
     foes_noises = []
     while True:
-        for v in traci.simulation.getArrivedIDList():
-            # if NUM_AGENTS != 0:
-                if not v.__contains__('bus') or not v.__contains__('random'):
-                    totarrived += 1
-        if totarrived == tottoarrive:
+        # for v in traci.simulation.getArrivedIDList():
+        # for v in traci.simulation.getArrivedIDList():
+        #     # if NUM_AGENTS != 0:
+        #         if not v.__contains__('bus') or not v.__contains__('random'):
+        #             totarrived += 1
+        # if totarrived >= tottoarrive:
+        if len(insim)==0 and totarrived>=1:
             break
         traci.simulationStep()
+        vehicles_in_sim = traci.vehicle.getIDList()
+        print(vehicles_in_sim)
         temp_agent_co2s = []
         temp_agent_fuels = []
         temp_agent_noises = []
@@ -235,11 +263,20 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
         for w in update_works(works):
             works[w] = 0
         for vehicle in vehs:
-            if(vehicle in traci.simulation.getDepartedIDList()):
-                insim.append(vehicle)
-            elif vehicle in traci.simulation.getArrivedIDList():
-                insim.remove(vehicle)
-                vehs[vehicle].arrived = True
+            if vehicle in vehicles_in_sim:
+                if vehicle not in insim:
+                    insim.append(vehicle)
+            else:
+                if vehicle in insim:
+                    insim.remove(vehicle)
+                    vehs[vehicle].arrived = True
+                    if not vehicle.__contains__('bus') and not vehicle.__contains__('random'):
+                        totarrived += 1
+            # if(vehicle in traci.simulation.getDepartedIDList()):
+            #     insim.append(vehicle)
+            # elif vehicle in traci.simulation.getArrivedIDList():
+            #     insim.remove(vehicle)
+            #     vehs[vehicle].arrived = True
                 # if NUM_AGENTS == 0:
                 #     totarrived += 1
             if vehicle in insim:
@@ -315,16 +352,13 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                     if s.getID() not in signalled_works:
                                         signalled_works.append(s.getID())
                                         traci.edge.setParameter(s.getID(),'color',12)
-                                        print('new works at '+str(s.getID()))
-                        if len(signalled_works)!=prev_signalled_works:
-                            print('new works detected')
                         if ONLINE and ((currentid,end_edge[vehicle]) not in behaviour_created or len(signalled_works)!=prev_signalled_works):
-                                print('producing behaviours ')
                                 behaviour_db,paths = online_create_behaviours(mapdata,NUM_ALGS,end_edge[vehicle],ss_edges,behaviour_db,behaviour_created,signalled_works,len(signalled_works)!=prev_signalled_works)
                                 for p in paths:
                                     if p not in paths_db:
-                                        paths_db[p] = [None]*len(targets)
-                                    paths_db[p][agents[vehicle].targetIndex] = paths[p]
+                                        paths_db[p] = [None]*(len(targets)*NUM_ALGS)
+                                    for i in range(NUM_ALGS):
+                                        paths_db[p][agents[vehicle].targetIndex+i] = paths[p][i]
                                 for v in ss_edges:
                                     if (v.getID(),end_edge[vehicle]) not in behaviour_created or len(signalled_works)!=prev_signalled_works:
                                         behaviour_created.append((v.getID(),end_edge[vehicle]))
@@ -371,7 +405,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         print(vehicle+' ARRIVED')
                         if vehicle not in correctlyarrived:
                             correctlyarrived.append(vehicle)
-                    print(str(vehicle)+'on edge '+str(currentid)+' target '+str(prox_edge.getID())+' current target '+str(traci.vehicle.getRoute(vehicle)[-1]))
+                    print('time ['+str(int(secondcounter/secondtot))+':'+str(int(secondcounter%secondtot))+'] - '+str(vehicle)+' on edge '+str(currentid)+' target '+str(prox_edge.getID())+' current target '+str(traci.vehicle.getRoute(vehicle)[-1]))
                     # traci.vehicle.changeTarget(vehicle,prox_edge.getID())
                     traci.vehicle.setRoute(vehicle,traci.simulation.findRoute(roadid,prox_edge.getID()).edges)
                     print('selected edge '+str(prox_edge.getID())+' selected index '+str(vehs[vehicle].selected_id))
@@ -387,12 +421,10 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                             for selpat in range(NUM_ALGS): # range(len(paths_db[currentid])):
                                 colorv = getIfromRGB(list(alg_color(index2alg(selpat)))[0:3])
                                 # print(paths[currentid][selpat])
-                                pathlen = 0
                                 # print(paths_db[currentid][agents[vehicle].targetIndex][selpat])
                                 for e in paths_db[currentid][agents[vehicle].targetIndex+selpat]:
                                     # pathlen += net.getEdge(e).getLength()
                                     # pathlen += traci.edge.getTraveltime(e)
-                                    pathlen += net.getEdge(e).getLength()/net.getEdge(e).getSpeed()
                                     if e not in works:
                                         traci.edge.setParameter(e,'color',colorv)
                                 # print('pathlen '+str(pathlen))
@@ -404,6 +436,8 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         # traci.edge.setParameter(prox_edge.getID(),'color',colorvalue)
                         if vehicle in prev_edge:
                             traci.edge.setParameter(prev_edge[vehicle],'color',0)
+                print('time ['+str(int(secondcounter/secondtot))+':'+str(int(secondcounter%secondtot))+'] - '+str(vehicle)+' on edge '+str(roadid))
+                    
                 prev_edge[vehicle] = roadid
                 if roadid not in passed[vehicle]:
                     passed[vehicle][roadid] = 1
@@ -437,19 +471,19 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     # print("VEHICLE || ALGORITHM || AVG_SPEED || TRAVELED_DISTANCE || DESTINATION")
     retds = []
     for vehicle in vehs:
-        if vehs[vehicle].arrived and (not vehicle.__contains__('bus') or not vehicle.__contains__('random')):
+        if vehs[vehicle].arrived and (not vehicle.__contains__('bus') and not vehicle.__contains__('random')):
             # spedlen = len(vehs[vehicle].speeds)
             # avgspeed = 0
             # if spedlen != 0:
             #     avgspeed = sum(vehs[vehicle].speeds)/len(vehs[vehicle].speeds)
             retds.append((vehicle,vehs[vehicle].alg,(0 if len(vehs[vehicle].speeds)==0 else np.mean(vehs[vehicle].speeds)),vehs[vehicle].dist,sum(vehs[vehicle].fuelconsumption),vehs[vehicle].waitingtime,sum(vehs[vehicle].noiseemission),sum(vehs[vehicle].co2emission),vehs[vehicle].traveltime))
-        elif not vehs[vehicle].arrived and (not vehicle.__contains__('bus') or not vehicle.__contains__('random')) and vehs[vehicle].route is not None:
-            counting = False
-            for ed in vehs[vehicle].route:
-                vehs[vehicle].traveltime += (net.getEdge(ed).getLength()/net.getEdge(ed).getSpeed()*(20 if ed in works else 1) if counting else 0)
-                if ed == vehs[vehicle].currentroad:
-                    counting = True
-            retds.append((vehicle,vehs[vehicle].alg,(0 if len(vehs[vehicle].speeds)==0 else np.mean(vehs[vehicle].speeds)),vehs[vehicle].dist,sum(vehs[vehicle].fuelconsumption),vehs[vehicle].waitingtime,sum(vehs[vehicle].noiseemission),sum(vehs[vehicle].co2emission),vehs[vehicle].traveltime))
+        # elif not vehs[vehicle].arrived and (not vehicle.__contains__('bus') or not vehicle.__contains__('random')) and vehs[vehicle].route is not None:
+        #     counting = False
+        #     for ed in vehs[vehicle].route:
+        #         vehs[vehicle].traveltime += (net.getEdge(ed).getLength()/net.getEdge(ed).getSpeed()*(20 if ed in works else 1) if counting else 0)
+        #         if ed == vehs[vehicle].currentroad:
+        #             counting = True
+        #     retds.append((vehicle,vehs[vehicle].alg,(0 if len(vehs[vehicle].speeds)==0 else np.mean(vehs[vehicle].speeds)),vehs[vehicle].dist,sum(vehs[vehicle].fuelconsumption),vehs[vehicle].waitingtime,sum(vehs[vehicle].noiseemission),sum(vehs[vehicle].co2emission),vehs[vehicle].traveltime))
         # print(str(vehicle)+" || "+str(vehs[vehicle].alg)+" || "+str(sum(vehs[vehicle].speeds)/len(vehs[vehicle].speeds))+" || "+str(vehs[vehicle].dist)+" || "+str(vehs[vehicle].dest))
     traci.close()
     speed_time_averages = []
