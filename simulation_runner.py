@@ -1,4 +1,8 @@
-from single_simulation import single_sim
+HIL = False
+if HIL:
+    from hil_runner import single_sim
+else:
+    from single_simulation import single_sim
 from behaviours_maker import create_behaviours
 import traci
 import matplotlib.pyplot as plt
@@ -6,25 +10,27 @@ import numpy as np
 from mapdata import MapData
 from plots import elaborate_and_make_plots
 from parameter_gui import gui_create_and_run
+from behaviours_maker import create_paths
 
 CREATE_BEHAVIOURS = False
 RUN_SIMULATION = True
 NUM_ALGS = 4
 IMG_FOLDER = 'SalernoScenario_12h_incident/'
 # IMG_FOLDER = 'data4plots/testdata5/'
-SCENARIO = 'Salerno'
+SCENARIO = 'Unisa'
 NUMBER_OF_CARS = 20
 NUM_AGENTS = 1
-USE_NUM_AGENTS = False
+USE_NUM_AGENTS = True
 PERC_AGENTS = 0.3
-TIME_HORIZON = 4 # keep around 5
+TIME_HORIZON = 3 # keep around 5
 SAVE_IMG = False
 SAVE_FILE = False
 
-USE_PARAM_GUI = False
+USE_PARAM_GUI = True
 
 if CREATE_BEHAVIOURS:
     create_behaviours(NUM_ALGS,MapData(SCENARIO),False)
+    create_paths(NUM_ALGS,MapData(SCENARIO),False)
 
 if RUN_SIMULATION:
     params_s = []
@@ -52,15 +58,17 @@ if RUN_SIMULATION:
     noise_std = []
     traveltimes_std = []
     x_axis = []
-    numberofsim = range(1,21)
-    # numberofsim = [1]
+    # maxrange = 21 if NUMBER_OF_CARS>=20 else 11
+    maxrange = 21
+    # numberofsim = range(1,maxrange) if not HIL else [1]
+    numberofsim = [1]
     mapdata = MapData(SCENARIO)
     if len(numberofsim)<2:
         i = 0
         j = 0
         if not USE_NUM_AGENTS:
             NUM_AGENTS = PERC_AGENTS*NUMBER_OF_CARS
-        retval,agents,arrived,sta,ssa,fa,atd,ftd = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.05,True,True,12,PERC_AGENTS,mapdata,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=False,CONSIDER_WORKS=False)
+        retval,agents,arrived,sta,ssa,fa,atd,ftd = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,0.05,True,True,12,PERC_AGENTS,mapdata,USE_NUM_AGENTS,NUM_AGENTS,NUM_ALGS=NUM_ALGS,ONLINE=True,CONSIDER_WORKS=False)
         vehicle_speeds = []
         vehicle_fuelconsumptions = []
         vehicle_waitingtimes = []
@@ -162,6 +170,7 @@ if RUN_SIMULATION:
         repeatsim = 3 if not USE_PARAM_GUI else int(params_s[1])
         start = 0
         step_perc = 1/max(numberofsim)
+        # step_perc = 1.0
         for i in numberofsim:
             # if i==14:
             #     start = 1
@@ -179,7 +188,8 @@ if RUN_SIMULATION:
                 ssize = 0.05
                 if i == 0:
                     ssize = 1.0
-                retval,agents,arrived,sta,ssa,fa,atd,ftd = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,ssize,True,True,12,step_perc*(i),mapdata,False,i,NUM_ALGS=NUM_ALGS,ONLINE=True,CONSIDER_WORKS=True)
+                retval,agents,arrived,sta,ssa,fa,atd,ftd = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,ssize,True,True,12,step_perc*(i),mapdata,False,i,NUM_ALGS=NUM_ALGS,ONLINE=False,CONSIDER_WORKS=False)
+                # retval,agents,arrived,sta,ssa,fa,atd,ftd = single_sim(NUMBER_OF_CARS,1.0,False,i,ssize,True,True,12,1,mapdata,False,i,NUM_ALGS=NUM_ALGS,ONLINE=True,CONSIDER_WORKS=False)
                 vehicle_speeds = []
                 vehicle_fuelconsumptions = []
                 vehicle_waitingtimes = []

@@ -1,16 +1,35 @@
 import sys
 from tkinter import *
+import tkinter as tk
 class Checkbar(Frame):
-   def __init__(self, parent=None, picks=[], side=LEFT, anchor=W):
+   
+
+   def disable_enable_binding(self,event):
+      if not self.vars[0].get():
+         self.chks[1].config(state=tk.ACTIVE)
+      else:
+         self.chks[1].config(state=tk.DISABLED)
+
+   def __init__(self, parent=None, picks=[], side=LEFT, anchor=W, binding=False):
       Frame.__init__(self, parent)
       self.vars = []
+      self.chks = []
       for pick in picks:
          var = IntVar()
          chk = Checkbutton(self, text=pick, variable=var)
+         if pick.__contains__('different paths'):
+            chk.config(state=tk.DISABLED)
+         self.chks.append(chk)
          chk.pack(side=side, anchor=anchor, expand=YES)
          self.vars.append(var)
+         if pick.__contains__('selected path'):
+            chk.bind('<Button-1>',self.disable_enable_binding)
+            chk.bind('<space>',self.disable_enable_binding)
+            chk.bind('<Return>',self.disable_enable_binding)
+      
    def state(self):
       return map((lambda var: var.get()), self.vars)
+   
 
 class Inputbar(Frame):
     def __init__(self, parent=None, picks=[], side=LEFT, anchor=W):
@@ -33,12 +52,13 @@ class Inputbar(Frame):
     def state(self):
       return map((lambda var: var.get()), self.vars)
 
-def write_params_on_file(number_of_cars,number_of_repeats,v):
+def write_params_on_file(number_of_cars,number_of_repeats,v,audio):
     colorsel = v[0]==1
     colorpaths = v[1]==1
-    colorreward = v[2]==1    
+    colorreward = v[2]==1
+    useaudio = audio[0]==1    
     f = open('sim_config.txt','w')
-    f.write(str(number_of_cars)+';'+str(number_of_repeats)+';'+str(colorsel)+';'+str(colorpaths)+';'+str(colorreward)+';')
+    f.write(str(number_of_cars)+';'+str(number_of_repeats)+';'+str(colorsel)+';'+str(colorpaths)+';'+str(colorreward)+';'+str(useaudio))
     f.close()
 
 def gui_create_and_run():
@@ -53,19 +73,22 @@ def gui_create_and_run():
    l2.grid(row=1,column=0,padx=2,pady=10)
    t2 = Entry(simdet,width=20)
    t2.grid(row=1,column=1,padx=2,pady=10)
-   tgl = Checkbar(simdet, ['Show colour of selected path (suggested for HiL)','Show colours for different paths (suggested for paths analysis)','Show cost map colours (suggested for reward analysis)'],side=TOP)
+   tgl = Checkbar(simdet, ['Show colour of selected path (suggested for HiL)','Show colours for different paths (suggested for paths analysis)','Show cost map colours (suggested for reward analysis)'],side=TOP,binding=True)
    tgl.grid(row=2)
+   tgl2 = Checkbar(simdet, ['Use audio guide'],side=TOP)
+   tgl2.grid(row=3)
    def allstates(): 
       v = list(tgl.state())
       number_of_cars = int(t1.get())
       number_of_repeats = int(t2.get())
-      write_params_on_file(number_of_cars,number_of_repeats,v)
+      audio = list(tgl2.state())
+      write_params_on_file(number_of_cars,number_of_repeats,v,audio)
       root.destroy()
    def allbreak():
        root.destroy()
        sys.exit(0)
-   Button(simdet, text='Start Simulations', command=allstates).grid(row=3,column=0)
-   Button(simdet, text='Quit', command=allbreak).grid(row=3,column=1)
+   Button(simdet, text='Start Simulations', command=allstates).grid(row=4,column=0)
+   Button(simdet, text='Quit', command=allbreak).grid(row=4,column=1)
    root.mainloop()
    
 if __name__ == '__main__':

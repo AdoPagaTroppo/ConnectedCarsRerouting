@@ -20,9 +20,19 @@ from spawners import *
 from colors import *
 from text2speech_handler import playAudio
 from node_file_parser import parse_file_for_checkpoints    
+from traci import TraCIException
+from single_simulation import calculate_pathlen_meters
+
+class Message():
+
+    def __init__(self,lat,lon):
+        self.lat = lat
+        self.lon = lon
 
 def reading_thread(ser):
     global msg
+    global stop
+    stop = False
     print('thread is on')
     msg = None
     try:
@@ -35,10 +45,41 @@ def reading_thread(ser):
             if msgstr.__contains__('lat=') and msgstr.__contains__('lon=') and (not msgstr.__contains__('lat=,') and not msgstr.__contains__('lon=,')):
                 msg = msg2
                 print(f"lat: {msg.lat} - lon: {msg.lon}")
-                
-            sleep(0.250)
+            # while not proceed:
+            #     pass    
+            # sleep(0.10)
     except KeyboardInterrupt:
         ser.close()
+
+def reading_thread_file(mapdata):
+    global msg
+    global stop
+    # global initial_edge
+    # global x
+    # global y
+    print('thread is on')
+    msg = None
+    stop = False
+    # initial_edge = None
+    coords = []
+    f = open('log_gps_tosalernofull.txt','r')
+    dats = f.readlines()
+    for dat in dats:
+        cs = dat.split(':')
+        coords.append([float(cs[0]),float(cs[1])])
+    i = 0
+    sleep(10.0)
+    for i in range(len(coords)):
+        msg = Message(coords[i][0],coords[i][1])
+        print(coords[i])
+        # initial_edge,x,y = find_closest_edge(mapdata)
+        while not proceed:
+            pass
+        sleep(0.1)
+    stop = True
+    exit()
+
+
 
 def take_first(elem):
     return elem[0]
@@ -47,20 +88,38 @@ def find_closest_edge(mapdata):
     
     net = mapdata.net
     edgelist = mapdata.edgelist
-    radius = 20
+    radius = 5
     x, y = net.convertLonLat2XY(msg.lon, msg.lat) 
-    ne_edges = net.getNeighboringEdges(x, y, radius)
-    distancesAndEdges = sorted([(dist, edge) for edge, dist in ne_edges], key=take_first)
+    ne_edges = net.getNeighboringEdges(x, y, radius,includeJunctions=False)
+    # while len(ne_edges)==0:
+    #     x, y = net.convertLonLat2XY(msg.lon, msg.lat) 
+    #     ne_edges = net.getNeighboringEdges(x, y, radius,includeJunctions=True)
+    #     print('not found yet, coords '+str(msg.lat)+','+str(msg.lon))
+    #     pass
+    distancesAndEdges_full = sorted([(dist, edge) for edge, dist in ne_edges], key=take_first)
+    distancesAndEdges = []
+    for dae in distancesAndEdges_full:
+        # print(dae[1])
+        if dae[1].allows('passenger'):
+            # dist, closestEdge = dae
+            # print(closestEdge)
+            # break
+            distancesAndEdges.append(dae)
+    if len(distancesAndEdges)==0:
+        return None,0,0
     dist, closestEdge = distancesAndEdges[0]
-    for dae in distancesAndEdges:
-        if dae[1].getID() in edgelist:
-            dist, closestEdge = dae
-            break
     initial_edge = closestEdge.getID()
+    print('x: '+str(x)+' y: '+str(y)+' '+str(net.getEdge(initial_edge)))
     return initial_edge,x,y
 
+def check_audio_from_params():
+    f = open('sim_config.txt','r')
+    c = f.readline().split(';')[5]
+    c = eval(c)
+    f.close()
+    return c
+
 WORKS_THRESHOLD = 1
-PLAY_AUDIO = False
 
 def randomSignal(prob,vehicle,roadid,works):
     signal = random.random()<prob
@@ -207,15 +266,18 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     SCENARIO = mapdata.scenario
     PERC_AGENT_CARS = DESIRED_AGENTS/NUM_VEHICLES if USE_DESIRED_AGENTS else PERC_AGENT_CARS*PERC_UNI_CARS
     NUM_AGENTS = NUM_VEHICLES*PERC_AGENT_CARS
+    PLAY_AUDIO = check_audio_from_params()
     # subprocess.run(["D:\\Users\\Principale\\Downloads\\eclipse-mosaic-24.1\\mosaic.bat","-c","D:\\Users\\Principale\\Desktop\\Uni\\M2 Anno\\Tesi\\ThesisProjectFolder\\ConnectedCarsRerouting\\scenario_config_json"])
-    ser = serial.Serial('/dev/rfcomm0', 9600)
-    
+    # ser = serial.Serial('/dev/rfcomm0', 9600)
+    global proceed
+    proceed = False
     # create a thread
-    thread = Thread(target=reading_thread, args=[ser])
+    # thread = Thread(target=reading_thread, args=[ser])
+    thread = Thread(target=reading_thread_file, args=[mapdata])
     # run the thread
     thread.daemon = True
     thread.start()
-    sleep(1.0)
+    # sleep(1.0)
     traci.start(['sumo'+('-gui' if SHOW_GUI else ''),'-c','osm_'+str(SCENARIO)+'.sumocfg','--step-length',str(STEP_SIZE)])
     graphdict = mapdata.graphdict
     net = mapdata.net
@@ -223,22 +285,28 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     edgelist = mapdata.edgelist
     destinations = mapdata.destinations
     checkpoints = parse_file_for_checkpoints(str(SCENARIO)+'ScenarioData/checkpoints.txt')
-    radius = 20
     while msg is None:
         pass
-    x, y = net.convertLonLat2XY(msg.lon, msg.lat) 
-    ne_edges = net.getNeighboringEdges(x, y, radius)
-    while(len(ne_edges)==0):
-        ne_edges = net.getNeighboringEdges(x, y, radius)
-    print(ne_edges)
-    if len(ne_edges) > 0:
+    # x, y = net.convertLonLat2XY(msg.lon, msg.lat) 
+    # ne_edges = net.getNeighboringEdges(x, y, radius)
+    # while(len(ne_edges)==0):
+    #     ne_edges = net.getNeighboringEdges(x, y, radius)
+    #     x, y = net.convertLonLat2XY(msg.lon, msg.lat)
+    # print(ne_edges)
+    initial_edge,x,y = find_closest_edge(mapdata)
+    while initial_edge is None:
+        initial_edge, x, y = find_closest_edge(mapdata)
+        proceed = True
+    proceed = False
+    if initial_edge is not None:
         initial_edge,x,y = find_closest_edge(mapdata)
         vehs = spawnUncontrolledCars(int((PERC_UNI_CARS-PERC_AGENT_CARS)*NUM_VEHICLES),mapdata)
         agents,end_edge = spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,ONLINE,initial_edge)
         print('loaded vehicles')
         agent_car = list(agents.keys())[0]
+        
         traci.vehicle.moveToXY(agent_car,initial_edge,0,x,y)
-    
+        # traci.vehicle.setSpeed(agent_car,0.101)
         totarrived = 0
         rerouting_occurred = {}
         for vehicle in vehs:
@@ -246,6 +314,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
         forbid_rerouting = []
         forbid_rerouting.append('agent')
         prev_edge = {}
+        cl_prev_edge = {}
         occupied_edges = {}
         next_edge = {}
         secondtot = 1/STEP_SIZE
@@ -265,9 +334,18 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
         passed = {}
         behaviour_created = []
         behaviour_db = np.zeros((len(targets)*NUM_ALGS, len(edgelist), len(edgelist)))
-        colorstreet = True
-        colorreward = False
-        colorpaths = False
+        checkfromfile = True
+        colorpars = []
+        try:
+            f = open('sim_config.txt','r')
+            colorparams = f.readline()
+            f.close()
+            colorpars = colorparams.split(';')
+        except:
+            checkfromfile = False
+        colorstreet = False if not checkfromfile else eval(colorpars[2])
+        colorreward = False if not checkfromfile else eval(colorpars[4])
+        colorpaths = False if not checkfromfile else eval(colorpars[3])
         rewards4colors = {}
         paths_db = {} if ONLINE else load_offline_paths(SCENARIO,NUM_ALGS,CONSIDER_WORKS)
         agent_co2s = []
@@ -276,7 +354,12 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
         foes_co2s = []
         foes_fuels = []
         foes_noises = []
+        current_edge = None
+                    
         while True:
+            proceed = False
+            move = False
+                            
             for v in traci.simulation.getArrivedIDList():
                 # if NUM_AGENTS != 0:
                     if not v.__contains__('bus') or not v.__contains__('random'):
@@ -284,6 +367,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
             if totarrived == tottoarrive:
                 break
             traci.simulationStep()
+            proceed = True
             temp_agent_co2s = []
             temp_agent_fuels = []
             temp_agent_noises = []
@@ -302,6 +386,62 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     # if NUM_AGENTS == 0:
                     #     totarrived += 1
                 if vehicle in insim:
+                    roadid = traci.vehicle.getRoadID(vehicle)
+                    try:
+                        if vehicle.__contains__('agent') and not stop:
+                            old_x = x
+                            old_y = y
+                            current_edge,x,y = find_closest_edge(mapdata)
+                            conn = mapdata.edgegraph
+                            rid = roadid if not roadid.__contains__(':') else next_edge[agent_car]
+                            # if current_edge!=rid:
+                            #     if rid in conn:
+                            #         if current_edge in conn[rid]:
+                            # # traci.vehicle.setSpeed(agent_car,math.sqrt((x-old_x)**2+(y-old_y)**2)/STEP_SIZE)
+                            # # traci.vehicle.setRoute(agent_car,paths_db[current_edge][agents[vehicle].targetIndex+indmin])
+                            #             traci.vehicle.moveToXY(agent_car,current_edge,-1,x,y) # 2 check da fare: lane=0 o lane=-1, inoltre cambiare moveToXY in moveToù
+                            #         else:
+                            #             current_edge = None
+                            # else:
+                            print('roadid '+str(roadid)+' current_edge '+str(current_edge))
+                            print('current route '+str(list(traci.vehicle.getRoute(agent_car))))
+                            # if not current_edge.__contains__(':') and current_edge not in list(traci.vehicle.getRoute(agent_car)):
+                            #     print('resetting')
+                            #     traci.vehicle.setRoute(agent_car,paths_db[current_edge][agents[vehicle].targetIndex+indmin])
+                            keepRoute = 1
+                            if not roadid.__contains__(':'):
+                                if roadid in conn:
+                                    pathfromroadid = list(traci.simulation.findRoute(roadid,current_edge).edges)
+                                    maxlen = 10
+                                    pathlen = 100 if len(pathfromroadid)==0 else calculate_pathlen_meters(pathfromroadid,mapdata)
+                                    if (len(pathfromroadid)>0) or current_edge == roadid:
+                                        move = True
+                                        keepRoute = 0
+                                        # if agent_car in cl_prev_edge:
+                                        #     pathfromprev = list(traci.simulation.findRoute(cl_prev_edge[agent_car],current_edge).edges)
+                                        #     pathlen2 = 100 if len(pathfromprev)==0 else calculate_pathlen_meters(pathfromprev,mapdata)
+                                        #     if (pathlen2<maxlen) or current_edge == cl_prev_edge[agent_car]:
+                                        #         keepRoute = 0
+                                        #     else:
+                                        #         keepRoute = 1
+                                        print('moving')
+                            else:
+                                # if agent_car in cl_prev_edge:
+                                #     if cl_prev_edge[agent_car] in conn:
+                                #         if current_edge in conn[cl_prev_edge[agent_car]] or current_edge == cl_prev_edge[agent_car]:
+                                move = True
+                                keepRoute = 1
+                            if move:
+                                # route = list(traci.vehicle.getRoute(agent_car))
+                                # if agent_car in cl_prev_edge:
+                                #     if current_edge!=route(route.index(cl_prev_edge[agent_car]+1)) and current_edge!=cl_prev_edge[agent_car]:
+                                #         print('entered')    
+                                #         traci.vehicle.changeTarget(agent_car,current_edge)
+                                traci.vehicle.moveToXY(agent_car,current_edge,-1,x,y,keepRoute=keepRoute)
+                    except:
+                        move = False
+                        print('exception here')
+                            
                     vehicle_speed = traci.vehicle.getSpeed(vehicle)
                     vehicle_fuel = traci.vehicle.getFuelConsumption(vehicle)*STEP_SIZE
                     vehicle_noise = traci.vehicle.getNoiseEmission(vehicle)
@@ -323,7 +463,13 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     vehs[vehicle].traveltime += (1 if secondcounter%secondtot==0 else 0) # (scounter+1)-vehs[vehicle].depart
                     if vehicle not in passed:
                         passed[vehicle] = {}
-                    roadid = traci.vehicle.getRoadID(vehicle)
+                    print('roadid '+str(roadid))
+                    if not roadid.__contains__(':'):
+                        if vehicle not in cl_prev_edge or roadid!=cl_prev_edge[vehicle]:
+                            cl_prev_edge[vehicle] = roadid
+                    print('cl prev edge '+str(cl_prev_edge[vehicle]))
+                    if agent_car==vehicle and current_edge is not None and move and not roadid.__contains__(':'):
+                        roadid = cl_prev_edge[agent_car]
                     if secondcounter%secondtot == 0 and not roadid.__contains__(':'):
                         vehs[vehicle].currentroad = roadid
                         randomSignal(0.005,vehs[vehicle],roadid,works)
@@ -337,6 +483,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         # print(str(vehicle)+" TWEETED: hey, there's work in progress at "+str(roadid))
                     elif roadid not in works:
                         traci.vehicle.setSpeed(vehicle,-1)
+                    # traci.vehicle.setSpeed(agent_car,0.101)
                     if roadid in checkpoints:
                         if secondcounter%secondtot==0:
                             checkpoints[roadid]['speed'].append(vehicle_speed)
@@ -349,6 +496,9 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         occupied_edges[roadid] = 1
                     if vehicle.__contains__('agent') and (vehicle not in prev_edge or vehicle in prev_edge and prev_edge[vehicle]!=roadid) and (vehicle in next_edge and next_edge[vehicle]!=end_edge[vehicle] or vehicle not in next_edge) and len(roadid)>2:
                         currentid = roadid if not roadid.__contains__(':') else next_edge[vehicle]
+                        prevrt = None if agent_car not in cl_prev_edge else paths_db[cl_prev_edge[agent_car]][agents[vehicle].targetIndex+vehs[vehicle].selected_id]
+                        # currentid = list(traci.vehicle.getRoute(agent_car))[0]
+                        print('currentid '+str(currentid))
                         statecars = edgelist.index(net.getEdge(currentid))
                         vn = []
                         vn.append(net.getEdge(currentid))
@@ -430,8 +580,35 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                             print(vehicle+' ARRIVED')
                             if vehicle not in correctlyarrived:
                                 correctlyarrived.append(vehicle)
-                        initial_edge,x,y = find_closest_edge(mapdata)
-                        traci.vehicle.moveToXY(agent_car,initial_edge,0,x,y)
+                        # rt = traci.simulation.findRoute(roadid,prox_edge.getID()).edges
+                        # if len(rt)>0:
+                            # traci.vehicle.setRoute(agent_car,traci.simulation.findRoute(roadid,prox_edge.getID()).edges)
+                        # traci.vehicle.setRoute(agent_car,paths_db[initial_edge][agents[vehicle].targetIndex+indmin])
+                        # print(paths_db[currentid][agents[vehicle].targetIndex+indmin])
+                        rt = paths_db[currentid][agents[vehicle].targetIndex+indmin]
+                        rt2 = []
+                        # if vehicle in prev_edge:
+                        #     print('time to chekc')
+                        #     if prev_edge[vehicle] not in paths_db[currentid][agents[vehicle].targetIndex+indmin]:
+                        #         rt2.append(prev_edge[vehicle])
+                        # if agent_car in cl_prev_edge and move:
+                        #     if cl_prev_edge[agent_car] not in rt:
+                        #         rt2.extend(traci.simulation.findRoute(cl_prev_edge[agent_car],currentid).edges)
+                        
+                        rt2.extend(rt)
+                        print('route to set '+str(rt2))
+                        print('route to set 2 '+str(traci.simulation.findRoute(currentid,prox_edge.getID()).edges))
+                        try:
+                            traci.vehicle.setRoute(agent_car,rt2)
+                        except TraCIException:
+                            # prologue_rt = list(traci.simulation.findRoute(currentid,prevrt[1]).edges)
+                            # prologue_rt.extend(prevrt[2:])
+                            # traci.vehicle.setRoute(agent_car,prologue_rt)
+                            pass
+                        # traci.vehicle.setRoute(agent_car,traci.simulation.findRoute(currentid,prox_edge.getID()).edges)
+                        print('route '+str(traci.vehicle.getRoute(agent_car)))
+                        # traci.vehicle.moveToXY(agent_car,current_edge,-1,x,y) # 2 check da fare: lane=0 o lane=-1, inoltre cambiare moveToXY in moveTo
+                        # # traci.vehicle.moveTo(agent_car,net.getEdge(initial_edge).getLanes()[0].getID(),x,y) # 2 check da fare: lane=0 o lane=-1, inoltre cambiare moveToXY in moveTo
                         # colorvalue = sum(list(car_color(list(targets.keys())[list(targets.values()).index(end_edge[vehicle])]))[0:3])
                         # if colorstreet and selpath is not None:
                         if colorstreet and ((colorpaths) or (selpath is not None and not colorpaths)):
@@ -461,11 +638,13 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                             # traci.edge.setParameter(prox_edge.getID(),'color',colorvalue)
                             if vehicle in prev_edge:
                                 traci.edge.setParameter(prev_edge[vehicle],'color',0)
+                    
                     prev_edge[vehicle] = roadid
                     if roadid not in passed[vehicle]:
                         passed[vehicle][roadid] = 1
                     else:
                         passed[vehicle][roadid] += 1
+                        
             if secondcounter%secondtot == 0:
                 scounter += 1
                 if scounter%60 == 0:
@@ -490,7 +669,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
             foes_co2s.append(0 if len(temp_foes_co2s)==0 else np.mean(temp_foes_co2s))
             foes_noises.append(0 if len(temp_foes_noises)==0 else np.mean(temp_foes_noises))
             foes_fuels.append(0 if len(temp_foes_fuels)==0 else np.mean(temp_foes_fuels))
-            
+        proceed = True
         # print("VEHICLE || ALGORITHM || AVG_SPEED || TRAVELED_DISTANCE || DESTINATION")
         retds = []
         for vehicle in vehs:

@@ -10,6 +10,16 @@ from graph_util import build_graph
 from algorithms import build_path
 from colors import *
 
+def calculate_pathlen(path,works,mapdata):
+    worksweight = 20
+    net = mapdata.net
+    pathlen = 0
+    for j in path:
+        if j!='SUCC':
+            # pathlen += traci.edge.getTraveltime(j)*(1 if j not in works else 10) # keep track of signalled wip areas
+            pathlen += net.getEdge(j).getLength()/net.getEdge(j).getSpeed()*(1 if j not in works else worksweight)
+    return pathlen
+
 def valid_neighbors(edge,mapdata,target=None,forbid=None,checkIngoing=False):
     #get only valid turns for the given edge
     graphdict = mapdata.graphdict
@@ -140,6 +150,7 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
     route = [] # if decomment return 1 tab
     ext = None
     needforworks = False
+    print('edge '+str(e.getID()))
     if works:
         testext = build_path(mapdata,e.getID(),target_edge,index2alg(0)) # check if Dijkstra path includes wip areas
         if testext is not None:
@@ -150,29 +161,52 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
     if needforworks:
         # work areas detected in Dijkstra-based path, wip areas must be dodged
         if j<2:
+            print('works detected')
+            # print('algorithm, '+str(index2alg(j)))
             ext = build_path(mapdata,e.getID(),target_edge,index2alg(j)) # create path with Dijkstra or A* including wip areas
+            if ext is not None:
+                print('edge '+str(e.getID())+' path based on '+str(index2alg(j))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
         else: # for the other 2 behaviours
+            print('works detected')
             fnode = [] # list of nodes to forbid while building paths
             fnode.extend(works) # exclude wip areas first
             alt = False
             index = 0 # run Dijkstra by default
-            if j==4:
-                if e.getID() in dijkstrabased: # explore and exclude both wip areas and first street of Dijkstra-built path
-                    fnode.append(dijkstrabased[e.getID()])
-                    alt = True
+            # if j==3:
+            #     if e.getID() in dijkstrabased: # explore and exclude both wip areas and first street of Dijkstra-built path
+            #         fnode.append(dijkstrabased[e.getID()])
+            #         alt = True
             if not alt: # not running index 4 path
                 index = j-2
             ext = build_path(mapdata,e.getID(),target_edge,index2alg(index),forbidnode=fnode)
+            if ext is not None:
+                print('avoiding works')
+                if alt:
+                    print('avoiding dijkstra')
+                else:
+                    if j == 2:
+                        print('with dijkstra')
+                    else:
+                        print('with astar')
     # if path has yet to be found or no wip areas detected in Dijkstra-based path
     if ext is None or not needforworks: # no work areas detected in general or in Dijkstra-based path, explore as much as possible
+        # print('no works detected or no dodging possible')
         if j<2:
+            print('algorithm, '+str(index2alg(j)))
             ext = build_path(mapdata,e.getID(),target_edge,index2alg(j)) # create path with Dijkstra or A*
+            if ext is not None:
+                print('edge '+str(e.getID())+' path based on '+str(index2alg(j))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
         else: # for the other 2 behaviours
-            if e.getID() in dijkstrabased: # check if exploration is possible, so if an alternative route can lead to the destination
-                fnode = [dijkstrabased[e.getID()]]
-                ext = build_path(mapdata,e.getID(),target_edge,index2alg(j-2),forbidnode=fnode) # search for a route excluding Dijkstra's first edge in the path using Dijkstra or A*
+            # if e.getID() in dijkstrabased: # check if exploration is possible, so if an alternative route can lead to the destination
+            #     fnode = [dijkstrabased[e.getID()]]
+            #     ext = build_path(mapdata,e.getID(),target_edge,index2alg(j-2),forbidnode=fnode) # search for a route excluding Dijkstra's first edge in the path using Dijkstra or A*
+            #     if ext is not None:
+            #         print('avoiding dijkstra with '+str(index2alg(j-2))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
             if ext is None or len(ext)==0: # no alternative route was found using Dijkstra or A* while excluding the first street
                 ext = build_path(mapdata,e.getID(),target_edge,index2alg(j)) # use BFS or Greedy BFS
+                if ext is not None:
+                    print('edge '+str(e.getID())+' path based on '+str(index2alg(j))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
+
     # elif needforworks:
     #     # work areas detected in Dijkstra-based path, wip areas must be dodged
     #     if j<2:
@@ -198,6 +232,48 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
             route.extend(ext)
     return route # if decomment return 1 tab
 
+def create_paths(num_algs,mapdata,consider_works=False):
+    if 'SUMO_HOME' in os.environ:
+        tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
+        sys.path.append(tools)
+    else:
+        sys.exit("please declare environment variable 'SUMO_HOME'")
+    targets = mapdata.targets
+    edge_list = mapdata.edgelist
+    net = mapdata.net
+    edge_dict = mapdata.edge_dict
+    
+
+    sumocfg_name = 'osm_'+str(mapdata.scenario)+'.sumocfg'
+    sumoBinary = sumolib.checkBinary('sumo')
+
+    sumoCmd = [sumoBinary, "-c", sumocfg_name,"--step-length","0.05"] #The last parameter is the step size, has to be small
+    traci.start(sumoCmd)
+    print("Starting SUMO...")
+
+    works = mapdata.works if consider_works else {}
+    i=0
+    paths = {}
+    for t in targets:
+        dijkstrabased = {}
+        target_edge = targets[t]
+        for j in range(num_algs):
+            for e in edge_list:
+                if (e.getID() not in paths):
+                    paths[e.getID()] = []
+                route = index2path(j,target_edge,e,mapdata,dijkstrabased=dijkstrabased,works=works)
+                if len(paths[e.getID()])<num_algs*len(targets):
+                    if route is None:
+                        paths[e.getID()].append(None)
+                    else:    
+                        paths[e.getID()].append(list(route))
+                    valid_edges = valid_neighbors(e,mapdata,target_edge)
+                    if len(valid_edges)>1 and j==0:
+                        dijkstrabased[e.getID()] = route[1]
+            i+=1
+    print("Behaviors generated!")
+    traci.close()
+    np.save('paths_'+str(mapdata.scenario)+'_'+str(num_algs)+('_wip' if consider_works else ''), paths)
     
 def create_behaviours(num_algs,mapdata,consider_works=False):
 

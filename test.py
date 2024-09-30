@@ -64,25 +64,33 @@ import numpy as np
 # plt.title("PMF for edge "+str(ed.getID())+", destination Naples, Dijkstra algorithm")
 # plt.plot(b[0][1965])
 # plt.show()
-from single_simulation import calculate_pathlen
+# from single_simulation import calculate_pathlen
 
-SCENARIO = 'Salerno'
-map = MapData(SCENARIO)
-pathlens = [[0]*len(map.targets)]*len(map.edgelist)
-print(map.targets)
-for i in range(len(map.edgelist)):
-    ed = map.edgelist[i]
-    print('Analyzing edge '+str(ed.getID()))
-    for j in range(len(list(map.targets.values()))):
-        print('\t for target '+str(list(map.targets.keys())[j]))
-        path = build_path(map,ed.getID(),list(map.targets.values())[j],'e_dijkstra')
-        plen = 0
-        if path is not None:
-            plen = calculate_pathlen(path,[],map)
-        else:
-            plen = math.inf
-        pathlens[i][j] = plen
-np.save('pathlens_'+str(SCENARIO),pathlens)
+# SCENARIO = 'Salerno'
+# map = MapData(SCENARIO)
+# pathlens = [[0]*len(map.targets)]*len(map.edgelist)
+# print(map.targets)
+# for i in range(len(map.edgelist)):
+#     ed = map.edgelist[i]
+#     print('Analyzing edge '+str(ed.getID()))
+#     for j in range(len(list(map.targets.values()))):
+#         print('\t for target '+str(list(map.targets.keys())[j]))
+#         path = build_path(map,ed.getID(),list(map.targets.values())[j],'e_dijkstra')
+#         plen = 0
+#         if path is not None:
+#             plen = calculate_pathlen(path,[],map)
+#         else:
+#             plen = math.inf
+#         pathlens[i][j] = plen
+# np.save('pathlens_'+str(SCENARIO),pathlens)
     
     
-# DA FINIRE DOPO, AGGIUNGERE MECCANISMO EFFICIENTE DI MEMORIZZAZIONEs
+# DA FINIRE DOPO, AGGIUNGERE MECCANISMO EFFICIENTE DI MEMORIZZAZIONE
+
+coords = []
+f = open('log_gps.txt','r')
+dats = f.readlines()
+for dat in dats:
+    cs = dat.split(':')
+    coords.append([float(cs[0]),float(cs[1])])
+print(coords)

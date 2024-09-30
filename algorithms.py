@@ -2,6 +2,12 @@ from queue import PriorityQueue
 from queue import Queue
 import math
 import traci
+from colors import alg_color
+from colors import getIfromRGB
+import time
+
+ANIMATION = False
+TSTEP = 0.01
 
 def connection_exists(node1,node2,node3,graphdict,connections,edge=None):
     # print(node1+" "+node2+" "+node3)
@@ -194,11 +200,16 @@ def edge_bfs(start,goal,edgegraph,forbidnode=None):
     came_from = {}
     came_from[start] = None
     goal_found = False
+    colorv = getIfromRGB(list(alg_color('e_bfs'))[0:3])
     while not frontier.empty():
         current = frontier.get()
         if current == goal:
             goal_found = True
-            break
+            break               
+        if ANIMATION and not goal_found:
+            traci.edge.setParameter(current,'color',colorv)
+            time.sleep(TSTEP)
+            traci.simulationStep()
         for dests in edgegraph[current]:
             if dests not in came_from and (forbidnode is None or (forbidnode is not None and dests not in forbidnode)):
                 frontier.put(dests)
@@ -226,11 +237,16 @@ def edge_greedybfs(mapdata,start,goal,forbidnode=None):
     came_from = {}
     came_from[start] = None
     goal_found = False
+    colorv = getIfromRGB(list(alg_color('e_greedybfs'))[0:3])
     while not frontier.empty():
         current = frontier.get()[1]
         if current == goal:
             goal_found = True
             break
+        if ANIMATION and not goal_found:
+            traci.edge.setParameter(current,'color',colorv)
+            time.sleep(TSTEP)
+            traci.simulationStep()
         for dests in edgegraph[current]:
             if dests not in came_from and (forbidnode is None or (forbidnode is not None and dests not in forbidnode)):
                 frontier.put((heuristic(net.getEdge(dests).getToNode().getID(),net.getEdge(goal).getToNode().getID(),graphmap),dests))
@@ -257,19 +273,26 @@ def edge_dijkstra(mapdata,start,goal,forbidnode=None):
     came_from = {}
     came_from[start] = None
     cost_so_far = {}
-    cost_so_far[start] = net.getEdge(start).getLength()/net.getEdge(start).getSpeed()
+    cost_so_far[start] = edge_cost(mapdata,start)
     goal_found = False
+    colorv = getIfromRGB(list(alg_color('e_dijkstra'))[0:3])
     while not frontier.empty():
         popel = frontier.get()
         current = popel[1]
         if current == goal:
+            # print('GOAL FOUND')
             goal_found = True
             break
+        if ANIMATION and not goal_found:
+            traci.edge.setParameter(current,'color',colorv)
+            time.sleep(TSTEP)
+            if not goal_found:
+                traci.simulationStep()
         for dests in edgegraph[current]:
             if forbidnode is None or (forbidnode is not None and dests not in forbidnode):
                 # new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength())
                 # new_cost=float(cost_so_far[current])+float(traci.edge.getTraveltime(dests))
-                new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength()/net.getEdge(dests).getSpeed())
+                new_cost=float(cost_so_far[current])+edge_cost(mapdata,dests)
                 if dests not in cost_so_far or new_cost<cost_so_far[dests]:
                     frontier.put((new_cost,dests))
                     came_from[dests] = current
@@ -297,17 +320,23 @@ def edge_astar(mapdata,start,goal,forbidnode=None):
     came_from = {}
     came_from[start] = None
     cost_so_far = {}
-    cost_so_far[start] = net.getEdge(start).getLength()/net.getEdge(start).getSpeed()
+    cost_so_far[start] = edge_cost(mapdata,start)
     goal_found = False
+    colorv = getIfromRGB(list(alg_color('e_astar'))[0:3])
     while not frontier.empty():
         current = frontier.get()[1]
         if current == goal:
             goal_found = True
             break
+        if ANIMATION and not goal_found:
+            traci.edge.setParameter(current,'color',colorv)
+            time.sleep(TSTEP)
+            traci.simulationStep()
         for dests in edgegraph[current]:
             if forbidnode is None or (forbidnode is not None and dests not in forbidnode):
                 # new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength())
-                new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength()/net.getEdge(dests).getSpeed())
+                # new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength()/net.getEdge(dests).getSpeed())
+                new_cost=float(cost_so_far[current])+edge_cost(mapdata,dests)
                 if dests not in cost_so_far or new_cost<cost_so_far[dests]:
                     frontier.put((new_cost+heuristic(net.getEdge(dests).getToNode().getID(),net.getEdge(goal).getToNode().getID(),graphmap),dests))
                     came_from[dests] = current
@@ -328,4 +357,7 @@ def edge_astar(mapdata,start,goal,forbidnode=None):
 def edge_cost(mapdata,edge):
     maxprio = mapdata.maxprio
     minprio = mapdata.minprio
+    net = mapdata.net
+    return float(net.getEdge(edge).getLength()/net.getEdge(edge).getSpeed())
+    # return traci.edge.getTraveltime(edge)
     

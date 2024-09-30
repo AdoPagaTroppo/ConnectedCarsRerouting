@@ -37,6 +37,7 @@ class OnlineCrowdsourcing():
         
         
     def receding_horizon_DM(self, state, tHor, stateSpace, r, online = False, behaviours = None, edgelist=None):
+        verbose = False
         ### Decision-making loop
         # Arguments: state, time horizon, state space, reward array (actually a cost)
         xInd = np.where(stateSpace == state)[0][0] #Index of the state in the reduced state space
@@ -79,9 +80,11 @@ class OnlineCrowdsourcing():
         timeHor.reverse()
         # rBar = r
         for t in timeHor:
-            # print('time '+str(t))
+            if verbose:
+                print('time '+str(t))
             rBar = r + rHat #Adapt reward
-            # print([x for x in rBar if x!=0])
+            if verbose:
+                print([x for x in rBar if x!=0])
             # for i in range(self.targetNum):
             for i in range(self.numalgs):
                 for j in range(dim):
@@ -101,18 +104,19 @@ class OnlineCrowdsourcing():
                     rHat[stateSpace[i]] = -min(weights[:,i]) #Calculate rHat
                     # if edgelist is not None:
                     #     print(edgelist[stateSpace[i]].getID())
-                    # print('rHat')
-                    # print([x for x in rHat if x!=0])
-                    # print('weights')
-                    # print([x for x in weights[:,i] if x!=0])
+                    if verbose:
+                        print('rHat')
+                        print([x for x in rHat if x!=0])
+                        print('weights')
+                        print([x for x in weights[:,i] if x!=0])
         # indMin = np.argmin(weights[self.targetIndex:self.targetIndex+self.numalgs,xInd])
         # print('vehicle to '+str(self.targetIndex))
         # print('rHat')
         # print([x for x in rHat if x!=0])
         indMin = np.argmin(weights[:,xInd])
-        # print('index is '+str(indMin)+','+str(xInd)+' of item '+str(rHat[indMin])+' obtained through alg '+str(index2alg(indMin)))
-        # print('edge is '+str(edgelist[stateSpace[xInd]]))
+        if verbose:
+            print('index is '+str(indMin)+','+str(xInd)+' of item '+str(rHat[indMin])+' obtained through alg '+str(index2alg(indMin)))
+            print('edge is '+str(edgelist[stateSpace[xInd]]))
         pf = sources[indMin, xInd] #Pick pf
-        # print([x for x in pf if x!=0])
         # pf = sources[self.targetIndex, xInd] #Pick pf
         return(np.random.choice(range(self.edgeNum), p = pf)),indMin #Sample pf and return resulting state
