@@ -103,7 +103,7 @@ def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,online,agent_start=None
     for i in range(int(NUM_AGENTS)):
         # destt = random.choices(destinations,target_weights)[0]
         # destt = destinations[i%len(destinations)]
-        destt = destinations[5]
+        destt = destinations[1]
         dest = destt[0]
         agentid = 'agent'+str(i)+'_'+str(destt[1])
         agrouteid = agentid+'_route'

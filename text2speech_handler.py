@@ -21,16 +21,16 @@ def approx10(value):
     v = int(value/10)
     return v*10
 
-def playAudio(mapdata,current,prox,lan):
+def playAudio(mapdata,current,prox,lan,dist=None,prox_edge=None):
     net = mapdata.net
     connections = mapdata.connections
     roadname = net.getEdge(prox.getID()).getName()
     c_roadname = net.getEdge(current).getName()
-    roadlen = approx10(int(net.getEdge(current).getLength()))
+    roadlen = approx10(int(net.getEdge(current).getLength())) if dist is None else approx10(dist)
     keepGoing = roadname==c_roadname
     lentext = ("In "+str(roadlen)+" meters, " if lan=='en' else "Tra "+str(roadlen)+" metri, ") if roadlen>=20 else ""
     aud_text = lentext+("go " if lan=='en' else "procedi ")
-    direction = connections[current][prox.getID()]
+    direction = connections[current][prox.getID()] if prox_edge is None else connections[prox_edge.getID()][prox.getID()]
     directionstring = convertDir2String(direction,lan)
     aud_text += directionstring
     if len(roadname)>2:
