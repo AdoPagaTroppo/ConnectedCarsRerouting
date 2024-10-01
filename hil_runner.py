@@ -23,6 +23,7 @@ from node_file_parser import parse_file_for_checkpoints
 from traci import TraCIException
 from single_simulation import calculate_pathlen_meters
 from single_simulation import compute_reward
+from text2speech_handler import search_next
 
 class Message():
 
@@ -69,7 +70,7 @@ def reading_thread_file(mapdata):
         cs = dat.split(':')
         coords.append([float(cs[0]),float(cs[1])])
     i = 0
-    sleep(10.0)
+    sleep(3.0)
     for i in range(len(coords)):
         msg = Message(coords[i][0],coords[i][1])
         print(coords[i])
@@ -357,7 +358,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
         foes_fuels = []
         foes_noises = []
         current_edge = None
-                    
+        played_audio_edge = None
         while True:
             proceed = False
             move = False
@@ -612,16 +613,14 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                 selpath = paths_db[currentid][agents[vehicle].targetIndex+indmin]
                         if len(vn2)>2:
                             if NUM_AGENTS==1 and currentid==roadid and PLAY_AUDIO:
-                                playAudio(mapdata,currentid,prox_edge,LANG)
-                        else:
-                            if NUM_AGENTS==1 and PLAY_AUDIO and selpath is not None:
-                                vn3 = []
-                                vn3.append(net.getEdge(prox_edge.getID()))
-                                vn3.extend(valid_neighbors(net.getEdge(prox_edge.getID()),mapdata,end_edge[vehicle]))
-                                if len(vn3)>2:
-                                    even_next = paths_db[prox_edge.getID()][agents[vehicle].targetIndex+indmin][1]
-                                    dist = int(net.getEdge(currentid).getLength()+net.getEdge(prox_edge.getID()).getLength())                                    
-                                    playAudio(mapdata,currentid,net.getEdge(even_next),LANG,dist,prox_edge)
+                                playAudio(mapdata,currentid,prox_edge,LANG,roundabout=(currentid in mapdata.streets_in_roundabouts))
+                                # vn3 = []
+                                # vn3.append(net.getEdge(prox_edge.getID()))
+                                # vn3.extend(valid_neighbors(net.getEdge(prox_edge.getID()),mapdata,end_edge[vehicle]))
+                                # if len(vn3)>2:
+                                #     even_next = paths_db[prox_edge.getID()][agents[vehicle].targetIndex+indmin][1]
+                                #     dist = int(net.getEdge(currentid).getLength()+net.getEdge(prox_edge.getID()).getLength())                                    
+                                #     playAudio(mapdata,currentid,net.getEdge(even_next),LANG,dist,prox_edge)
                         next_edge[vehicle] = prox_edge.getID()
                         if prox_edge.getID() == end_edge[vehicle]:
                             print(vehicle+' ARRIVED')
@@ -684,7 +683,14 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                             # traci.edge.setParameter(prox_edge.getID(),'color',colorvalue)
                             if vehicle in prev_edge:
                                 traci.edge.setParameter(prev_edge[vehicle],'color',0)
-                    
+                    if vehicle.__contains__('agent'):
+                        if NUM_AGENTS==1 and PLAY_AUDIO and selpath is not None:
+                            print('enter here')
+                            true_play_audio, in_roundabout, dist, audio_edge, prev_audio_edge = search_next(mapdata,paths_db[currentid][agents[vehicle].targetIndex+indmin])
+                            if true_play_audio and audio_edge!=played_audio_edge:
+                                print('true play audio')
+                                playAudio(mapdata,currentid,net.getEdge(audio_edge),LANG,dist,net.getEdge(prev_audio_edge),in_roundabout,path=(None if not in_roundabout or paths_db[currentid] is None else paths_db[currentid][agents[vehicle].targetIndex+indmin]))
+                                played_audio_edge = audio_edge
                     prev_edge[vehicle] = roadid
                     if roadid not in passed[vehicle]:
                         passed[vehicle][roadid] = 1

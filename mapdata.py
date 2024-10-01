@@ -23,6 +23,31 @@ class Roundabout():
                     for e in outs:
                         if e.getID() not in self.roads:
                             self.exits.append(e.getID())
+    
+    def exit_order(self,mapdata,path):
+        net = mapdata.net
+        starting_edge = None
+        exiting_edge = None
+        exit_id = 1
+        for e in path:
+            if e in self.roads and starting_edge is None:
+                starting_edge = e
+            if starting_edge is not None and e in self.roads:
+                o_outs = net.getEdge(e).getOutgoing()
+                outs = []
+                if len(o_outs)>1:
+                    for e in o_outs:
+                        if net.getEdge(e.getID()).allows('passenger'):
+                            outs.append(e)
+                    if len(outs)>1:
+                        for e in outs:
+                            if e.getID() in self.exits:
+                                if e.getID() not in path:
+                                    exit_id += 1
+                                else:
+                                    break
+        return exit_id
+        
         
 
 class MapData():
@@ -62,9 +87,13 @@ class MapData():
         self.roundabouts = None
         create_roundabouts = False
         if os.path.exists(str(scenario)+'ScenarioData/roundabouts.txt'):
-            self.roundabouts = self.read_roundabouts()
+            self.roundabouts = self.read_roundabouts(scenario)
         elif create_roundabouts:
             self.roundabouts = self.find_roundabouts()
+        self.streets_in_roundabouts = {}
+        for r in self.roundabouts:
+            for road in r.roads:
+                self.streets_in_roundabouts[road] = r.id
         traci.close()
         
     def check_roundabouts(self,calling_edge,current_edge,len_up_to_now):
@@ -115,8 +144,8 @@ class MapData():
         f.write('\n')
         f.close()
             
-    def read_roundabouts():
-        f = open('roundabouts_Unisa.txt','r')
+    def read_roundabouts(self,scenario):
+        f = open(str(scenario)+'ScenarioData/roundabouts.txt','r')
         content = f.readlines()
         f.close()
         roundabouts = {}
