@@ -6,6 +6,7 @@ from mapdata import MapData
 import matplotlib.pyplot as plt
 import math
 import numpy as np
+from mapdata import Roundabout
 
 # sumoCmd = ['sumo', "-c", 'osm4.sumocfg',"--step-length","0.05"] #The last parameter is the step size, has to be small
 # traci.start(sumoCmd)
@@ -87,10 +88,49 @@ import numpy as np
     
 # DA FINIRE DOPO, AGGIUNGERE MECCANISMO EFFICIENTE DI MEMORIZZAZIONE
 
-coords = []
-f = open('log_gps.txt','r')
-dats = f.readlines()
-for dat in dats:
-    cs = dat.split(':')
-    coords.append([float(cs[0]),float(cs[1])])
-print(coords)
+# coords = []
+# f = open('log_gps.txt','r')
+# dats = f.readlines()
+# for dat in dats:
+#     cs = dat.split(':')
+#     coords.append([float(cs[0]),float(cs[1])])
+# print(coords)
+
+# m = MapData('Unisa')
+f = open('roundabouts_Unisa.txt','r')
+content = f.readlines()
+roundabouts = {}
+index = 0
+for r in content:
+    rid = 'r'+str(index)
+    roundabouts[rid] = {}
+    roundabouts[rid]['roads'] = []
+    roundabouts[rid]['exits'] = []
+    split_content = r.split(';')
+    r_len = int(split_content[0])
+    for i in range(r_len):
+        roundabouts[rid]['roads'].append(split_content[1+i].replace('\n',''))
+    e_len = int(split_content[1+r_len])
+    for i in range(e_len):
+        roundabouts[rid]['exits'].append(split_content[2+r_len+i].replace('\n',''))
+    print(roundabouts[rid])
+    index += 1
+f.close()
+
+traci.start(['sumo-gui','-c','osm_'+str('Unisa')+'.sumocfg','--step-length',str(0.05)])
+
+roundabouts2 = roundabouts
+# for r in roundabouts:
+#     path = traci.simulation.findRoute(roundabouts[r]['roads'][0],roundabouts[r]['roads'][-1]).edges
+#     if len(path)>0:
+#         roundabouts2[r] = roundabouts[r]
+
+
+for r in roundabouts2:
+    for roads in range(len(roundabouts2[r]['roads'])):
+        traci.edge.setParameter(roundabouts2[r]['roads'][roads],'color',12)
+    for roads in range(len(roundabouts2[r]['exits'])):
+        traci.edge.setParameter(roundabouts2[r]['exits'][roads],'color',12000)
+    traci.simulationStep()
+traci.close()
+    

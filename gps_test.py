@@ -39,17 +39,16 @@ def reading_thread(ser):
             if msgstr.__contains__('lat=') and msgstr.__contains__('lon=') and (not msgstr.__contains__('lat=,') and not msgstr.__contains__('lon=,')):
                 msg = msg2
                 print(f"lat: {msg.lat} - lon: {msg.lon}")
-                f = open('log_gps_tosalernofull.txt','a')
+                f = open('log_gps_test.txt','a')
                 f.write(str(msg.lat)+':'+str(msg.lon)+'\n')
                 f.close()
-            sleep(0.001)
     except KeyboardInterrupt:
         ser.close()
 
 ser = serial.Serial('/dev/rfcomm0', 9600)
     
 # create a thread
-f = open('log_gps_tosalernofull.txt','w')
+f = open('log_gps_test.txt','w')
 f.close()
 # thread = Thread(target=reading_thread, args=[ser])
 # # run the thread
