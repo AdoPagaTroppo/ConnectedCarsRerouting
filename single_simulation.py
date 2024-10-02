@@ -205,7 +205,7 @@ def calculate_pathlen_meters(path,mapdata):
     
 
 DIJKSTRA_BASED_REROUTING = False
-MEASURING = True
+MEASURING = False
 
 def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCLUDE_BUS, INCLUDE_RANDOM, START_TIME, PERC_AGENT_CARS, mapdata, USE_DESIRED_AGENTS=False, DESIRED_AGENTS=0, NUM_ALGS=1, ONLINE=False, CONSIDER_WORKS=False):
     LANG = 'it'
@@ -317,6 +317,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                 vehicle_fuel = traci.vehicle.getFuelConsumption(vehicle)*STEP_SIZE
                 vehicle_noise = traci.vehicle.getNoiseEmission(vehicle)
                 vehicle_co2 = traci.vehicle.getCO2Emission(vehicle)*STEP_SIZE
+                vehicle_waiting = traci.vehicle.getWaitingTime(vehicle)
                 if vehicle.__contains__('agent'):
                     temp_agent_co2s.append(vehicle_co2)
                     temp_agent_noises.append(vehicle_noise)
@@ -328,7 +329,14 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                 vehs[vehicle].speeds.append(vehicle_speed)
                 vehs[vehicle].dist = traci.vehicle.getDistance(vehicle)
                 vehs[vehicle].fuelconsumption.append(vehicle_fuel)
-                vehs[vehicle].waitingtime += traci.vehicle.getWaitingTime(vehicle)
+                if vehs[vehicle].waitingtime[-1]==0:
+                    if vehicle_waiting>0:
+                        vehs[vehicle].waitingtime[-1] = vehicle_waiting
+                else:
+                    if vehicle_waiting==0:
+                        vehs[vehicle].waitingtime.append(0)
+                    else:
+                        vehs[vehicle].waitingtime[-1] = vehicle_waiting
                 vehs[vehicle].co2emission.append(vehicle_co2)
                 vehs[vehicle].noiseemission.append(vehicle_noise)
                 vehs[vehicle].traveltime += (1 if secondcounter%secondtot==0 else 0) # (scounter+1)-vehs[vehicle].depart
@@ -345,7 +353,6 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                 signalled_works.append(roadid)
                                 traci.edge.setParameter(roadid,'color',12)
                     traci.vehicle.setSpeed(vehicle,net.getEdge(roadid).getSpeed()/20)
-                    # print(str(vehicle)+" TWEETED: hey, there's work in progress at "+str(roadid))
                 elif roadid not in works:
                     traci.vehicle.setSpeed(vehicle,-1)
                 if roadid in checkpoints:
@@ -520,7 +527,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
             # avgspeed = 0
             # if spedlen != 0:
             #     avgspeed = sum(vehs[vehicle].speeds)/len(vehs[vehicle].speeds)
-            retds.append((vehicle,vehs[vehicle].alg,(0 if len(vehs[vehicle].speeds)==0 else np.mean(vehs[vehicle].speeds)),vehs[vehicle].dist,sum(vehs[vehicle].fuelconsumption),vehs[vehicle].waitingtime,sum(vehs[vehicle].noiseemission),sum(vehs[vehicle].co2emission),vehs[vehicle].traveltime))
+            retds.append((vehicle,vehs[vehicle].alg,(0 if len(vehs[vehicle].speeds)==0 else np.mean(vehs[vehicle].speeds)),vehs[vehicle].dist,sum(vehs[vehicle].fuelconsumption),sum(vehs[vehicle].waitingtime),sum(vehs[vehicle].noiseemission),sum(vehs[vehicle].co2emission),vehs[vehicle].traveltime))
         # elif not vehs[vehicle].arrived and (not vehicle.__contains__('bus') or not vehicle.__contains__('random')) and vehs[vehicle].route is not None:
         #     counting = False
         #     for ed in vehs[vehicle].route:

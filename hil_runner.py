@@ -43,10 +43,13 @@ def reading_thread(ser):
             (raw_data, msg2) = nmr.read() #msg will be global variable that main will read
             # block for a moment
             msgstr = str(msg2)
-            print(msgstr)
+            # print(msgstr)
             if msgstr.__contains__('lat=') and msgstr.__contains__('lon=') and (not msgstr.__contains__('lat=,') and not msgstr.__contains__('lon=,')):
+                f = open('log_gps_vil.txt','a')
                 msg = msg2
-                print(f"lat: {msg.lat} - lon: {msg.lon}")
+                # print(f"lat: {msg.lat} - lon: {msg.lon}")
+                f.write(str(msg.lat)+':'+str(msg.lon)+'\n')
+                f.close()
             # while not proceed:
             #     pass    
             # sleep(0.10)
@@ -64,7 +67,7 @@ def reading_thread_file(mapdata):
     stop = False
     # initial_edge = None
     coords = []
-    f = open('log_gps_tosalernofull.txt','r')
+    f = open('log_gps_vil.txt','r')
     dats = f.readlines()
     for dat in dats:
         cs = dat.split(':')
@@ -269,6 +272,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     PERC_AGENT_CARS = DESIRED_AGENTS/NUM_VEHICLES if USE_DESIRED_AGENTS else PERC_AGENT_CARS*PERC_UNI_CARS
     NUM_AGENTS = NUM_VEHICLES*PERC_AGENT_CARS
     PLAY_AUDIO = check_audio_from_params()
+    # open('log_gps_vil.txt','w').close()
     # subprocess.run(["D:\\Users\\Principale\\Downloads\\eclipse-mosaic-24.1\\mosaic.bat","-c","D:\\Users\\Principale\\Desktop\\Uni\\M2 Anno\\Tesi\\ThesisProjectFolder\\ConnectedCarsRerouting\\scenario_config_json"])
     # ser = serial.Serial('/dev/rfcomm0', 9600)
     global proceed
@@ -289,12 +293,14 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     checkpoints = parse_file_for_checkpoints(str(SCENARIO)+'ScenarioData/checkpoints.txt')
     while msg is None:
         pass
+    print('message read')
     # x, y = net.convertLonLat2XY(msg.lon, msg.lat) 
     # ne_edges = net.getNeighboringEdges(x, y, radius)
     # while(len(ne_edges)==0):
     #     ne_edges = net.getNeighboringEdges(x, y, radius)
     #     x, y = net.convertLonLat2XY(msg.lon, msg.lat)
     # print(ne_edges)
+    print('looking for initial edge')
     initial_edge,x,y = find_closest_edge(mapdata)
     while initial_edge is None:
         initial_edge, x, y = find_closest_edge(mapdata)
@@ -359,6 +365,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
         foes_noises = []
         current_edge = None
         played_audio_edge = None
+        played_for_crossing = False
         while True:
             proceed = False
             move = False
@@ -389,23 +396,17 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     # if NUM_AGENTS == 0:
                     #     totarrived += 1
                 if vehicle in insim:
+                    played_for_crossing = False
                     roadid = traci.vehicle.getRoadID(vehicle)
                     try:
                         if vehicle.__contains__('agent') and not stop:
+                            # ADD CHECK TO KEEP ROAD WHILE NOT MOVING OR SIMILAR THINGS
+                            # ADDITIONALLY, FIX AUDIO
                             old_x = x
                             old_y = y
                             current_edge,x,y = find_closest_edge(mapdata)
                             conn = mapdata.edgegraph
                             rid = roadid if not roadid.__contains__(':') else next_edge[agent_car]
-                            # if current_edge!=rid:
-                            #     if rid in conn:
-                            #         if current_edge in conn[rid]:
-                            # # traci.vehicle.setSpeed(agent_car,math.sqrt((x-old_x)**2+(y-old_y)**2)/STEP_SIZE)
-                            # # traci.vehicle.setRoute(agent_car,paths_db[current_edge][agents[vehicle].targetIndex+indmin])
-                            #             traci.vehicle.moveToXY(agent_car,current_edge,-1,x,y) # 2 check da fare: lane=0 o lane=-1, inoltre cambiare moveToXY in moveToù
-                            #         else:
-                            #             current_edge = None
-                            # else:
                             print('roadid '+str(roadid)+' current_edge '+str(current_edge))
                             print('current route '+str(list(traci.vehicle.getRoute(agent_car))))
                             # if not current_edge.__contains__(':') and current_edge not in list(traci.vehicle.getRoute(agent_car)):
@@ -422,6 +423,18 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                 out_of_course_counter += 1
                             else:
                                 out_of_course_counter = 0
+                            if current_edge.__contains__('-'):
+                                c_temp = current_edge.replace('-','')
+                                for con in conn[cl_prev_edge[agent_car]]:
+                                    print(con)
+                                    if con == c_temp:
+                                        current_edge = con
+                                        break
+                            else:
+                                for con in conn[cl_prev_edge[agent_car]]:
+                                    if con.replace('-','') == current_edge:
+                                        current_edge = con
+                                        break
                             if not roadid.__contains__(':'):
                                 if roadid in conn:
                                     pathfromroadid = list(traci.simulation.findRoute(current_edge,roadid).edges)
@@ -429,6 +442,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                     pathlen = 100 if len(pathfromroadid)==0 else calculate_pathlen_meters(pathfromroadid,mapdata)
                                     
                                     shouldmove = True
+                                    
                                     if out_of_course_counter<tolerance:
                                         shouldmove = False
                                     # if roadid.__contains__('-'):
@@ -459,8 +473,9 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                         print(out_of_course_counter)
                                     else:
                                         move = False
-                                if not move and roadid!=current_edge:
+                                if not move and roadid!=current_edge and out_of_course_counter==0:
                                     move = True
+                                    keepRoute = 0
                             else:
                                 # if agent_car in cl_prev_edge:
                                 #     if cl_prev_edge[agent_car] in conn:
@@ -485,6 +500,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     vehicle_fuel = traci.vehicle.getFuelConsumption(vehicle)*STEP_SIZE
                     vehicle_noise = traci.vehicle.getNoiseEmission(vehicle)
                     vehicle_co2 = traci.vehicle.getCO2Emission(vehicle)*STEP_SIZE
+                    vehicle_waiting = traci.vehicle.getWaitingTime(vehicle)
                     if vehicle.__contains__('agent'):
                         temp_agent_co2s.append(vehicle_co2)
                         temp_agent_noises.append(vehicle_noise)
@@ -496,7 +512,14 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     vehs[vehicle].speeds.append(vehicle_speed)
                     vehs[vehicle].dist = traci.vehicle.getDistance(vehicle)
                     vehs[vehicle].fuelconsumption.append(vehicle_fuel)
-                    vehs[vehicle].waitingtime += traci.vehicle.getWaitingTime(vehicle)
+                    if vehs[vehicle].waitingtime[-1]==0:
+                        if vehicle_waiting>0:
+                            vehs[vehicle].waitingtime[-1] = vehicle_waiting
+                    else:
+                        if vehicle_waiting==0:
+                            vehs[vehicle].waitingtime.append(0)
+                        else:
+                            vehs[vehicle].waitingtime[-1] = vehicle_waiting
                     vehs[vehicle].co2emission.append(vehicle_co2)
                     vehs[vehicle].noiseemission.append(vehicle_noise)
                     vehs[vehicle].traveltime += (1 if secondcounter%secondtot==0 else 0) # (scounter+1)-vehs[vehicle].depart
@@ -614,6 +637,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         if len(vn2)>2:
                             if NUM_AGENTS==1 and currentid==roadid and PLAY_AUDIO:
                                 playAudio(mapdata,currentid,prox_edge,LANG,roundabout=(currentid in mapdata.streets_in_roundabouts))
+                                played_for_crossing = True
                                 # vn3 = []
                                 # vn3.append(net.getEdge(prox_edge.getID()))
                                 # vn3.extend(valid_neighbors(net.getEdge(prox_edge.getID()),mapdata,end_edge[vehicle]))
@@ -687,7 +711,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         if NUM_AGENTS==1 and PLAY_AUDIO and selpath is not None:
                             print('enter here')
                             true_play_audio, in_roundabout, dist, audio_edge, prev_audio_edge = search_next(mapdata,paths_db[currentid][agents[vehicle].targetIndex+indmin])
-                            if true_play_audio and audio_edge!=played_audio_edge:
+                            if true_play_audio and audio_edge!=played_audio_edge and not played_for_crossing:
                                 print('true play audio')
                                 playAudio(mapdata,currentid,net.getEdge(audio_edge),LANG,dist,net.getEdge(prev_audio_edge),in_roundabout,path=(None if not in_roundabout or paths_db[currentid] is None else paths_db[currentid][agents[vehicle].targetIndex+indmin]))
                                 played_audio_edge = audio_edge

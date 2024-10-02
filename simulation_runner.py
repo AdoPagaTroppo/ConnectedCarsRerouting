@@ -58,8 +58,8 @@ if RUN_SIMULATION:
     noise_std = []
     traveltimes_std = []
     x_axis = []
-    # maxrange = 21 if NUMBER_OF_CARS>=20 else 11
-    maxrange = 21
+    maxrange = 21 if NUMBER_OF_CARS>=20 else 11
+    # maxrange = 21
     # numberofsim = range(1,maxrange) if not HIL else [1]
     numberofsim = [1]
     mapdata = MapData(SCENARIO)

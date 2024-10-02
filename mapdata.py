@@ -90,10 +90,11 @@ class MapData():
             self.roundabouts = self.read_roundabouts(scenario)
         elif create_roundabouts:
             self.roundabouts = self.find_roundabouts()
-        self.streets_in_roundabouts = {}
-        for r in self.roundabouts:
-            for road in r.roads:
-                self.streets_in_roundabouts[road] = r.id
+        if self.roundabouts is not None:
+            self.streets_in_roundabouts = {}
+            for r in self.roundabouts:
+                for road in r.roads:
+                    self.streets_in_roundabouts[road] = r.id
         traci.close()
         
     def check_roundabouts(self,calling_edge,current_edge,len_up_to_now):

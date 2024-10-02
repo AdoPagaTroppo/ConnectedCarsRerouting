@@ -32,27 +32,41 @@ def playAudio(mapdata,current,prox,lan,dist=None,prox_edge=None,roundabout=False
     keepGoing = roadname==c_roadname
     lentext = ("In "+str(roadlen)+" meters, " if lan=='en' else "Tra "+str(roadlen)+" metri, ") if roadlen>=20 else ""
     aud_text = lentext
+    play = True
     if not roundabout:
         aud_text = aud_text+("go " if lan=='en' else "procedi ")
-        direction = connections[current][prox.getID()] if prox_edge is None else connections[prox_edge.getID()][prox.getID()]
-        directionstring = convertDir2String(direction,lan)
-        aud_text += directionstring
-        if len(roadname)>2:
-            aud_text += ((' towards ' if not keepGoing else ' along ') if lan=='en' else (' verso ' if not keepGoing else ' lungo '))+str(roadname)
+        direction = None
+        if prox_edge is None:
+            if prox.getID() in connections[current]:
+                direction = connections[current][prox.getID()]
+        else:
+            if prox.getID() in connections[prox_edge.getID()]:
+                direction = connections[prox_edge.getID()][prox.getID()]
+        if direction is not None:
+            directionstring = convertDir2String(direction,lan)
+            aud_text += directionstring
+            if len(roadname)>2:
+                aud_text += ((' towards ' if not keepGoing else ' along ') if lan=='en' else (' verso ' if not keepGoing else ' lungo '))+str(roadname)
+        else:
+            play = False
     else:
         if prox_edge is None:
-            aud_text = aud_text+("exit the roundabout." if lan=='en' else "esci dalla rotonda.")
+            if prox.getID() not in mapdata.streets_in_roundabouts:
+                aud_text = ("exit the roundabout." if lan=='en' else "esci dalla rotonda.")
+            else:
+                play = False
         else:
             aud_text = aud_text+("in the roundabout, take the " if lan=='en' else "alla rotonda, prendi la ")
             val = mapdata.roundabouts[int(mapdata.streets_in_roundabouts[prox.getID()].replace('r',''))].exit_order(mapdata,path)
             aud_text = aud_text+order_number_string(val,lan)+(" exit." if lan=='en' else " uscita.")
-    aud = gTTS(text=aud_text,lang=lan,slow=False)
-    f = TemporaryFile()
-    aud.write_to_fp(f)
-    f.seek(0)
-    pygame.mixer.init()
-    pygame.mixer.music.load(f)
-    pygame.mixer.music.play()
+    if play:
+        aud = gTTS(text=aud_text,lang=lan,slow=False)
+        f = TemporaryFile()
+        aud.write_to_fp(f)
+        f.seek(0)
+        pygame.mixer.init()
+        pygame.mixer.music.load(f)
+        pygame.mixer.music.play()
 
 def playWarningAudio(mapdata,road,roadsequence,lan):
     net = mapdata.net

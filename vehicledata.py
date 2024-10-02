@@ -10,7 +10,7 @@ class VehicleData:
         self.dest = dest
         self.depart = int(depart)
         self.fuelconsumption = []
-        self.waitingtime = 0
+        self.waitingtime = [0]
         self.noiseemission = []
         self.co2emission = []
         self.traveltime = 0

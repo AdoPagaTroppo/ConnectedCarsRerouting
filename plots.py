@@ -9,8 +9,8 @@ def remove_errors(payload):
 def elaborate_and_make_plots(TIMEDATA=False):
 
     SAVE_IMG=True
-    IMG_FOLDER = 'img_pathlen_roadspeeddensity_waiting_n/'
-    DATA_SOURCE = 'SalernoScenario_12h_incident_n/'
+    IMG_FOLDER = 'img/'
+    DATA_SOURCE = 'SalernoScenario_12h_incident/'
 
     filelist = os.listdir(DATA_SOURCE)
     print(filelist)
@@ -131,7 +131,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
                             print( np.load(fil))
                             sim_travel_agent.append(payload)
                         elif f_name[6].endswith('waiting'):
-                            sim_waiting_agent.append(payload*0.005)
+                            sim_waiting_agent.append(payload)
                     elif f_name[6].startswith('foe'):
                         print('is foe')
                         payload = np.load(fil)
@@ -155,7 +155,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
                             print( np.load(fil))
                             sim_travel_foe.append(payload)
                         elif f_name[6].endswith('waiting'):
-                            sim_waiting_foe.append(payload*0.005)
+                            sim_waiting_foe.append(payload)
                     else:
                         print('is generic')
                         payload = np.load(fil)
@@ -180,7 +180,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
                             print( np.load(fil))
                             sim_travel.append(payload)
                         elif f_name[6].endswith('waiting'):
-                            sim_waiting.append(payload*0.005)
+                            sim_waiting.append(payload)
             if len(sim_speeds_agent)==0:
                 sim_speeds_agent.append(0)
             if len(sim_fuel_agent)==0:

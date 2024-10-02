@@ -60,10 +60,10 @@ def spawnUncontrolledCars(num_uncontrolled,mapdata):
     i = 0
     j = 0
     for c in range(int(num_uncontrolled)):
-        # source = random.choices(sources)[0]
-        source = '766350967'
-        # dest = random.choices(destinations,target_weights)[0]
-        dest = destinations[0]
+        source = random.choices(sources)[0]
+        # source = '766350967'
+        dest = random.choices(destinations,target_weights)[0]
+        # dest = destinations[0]
         id = 'veh'+str(c+1)+'_'+str(dest[1])
         routeid = 'route'+str(c+1)
         # pathbuilt=build_path(graphdict,source,net.getEdge(dest[0]).getToNode().getID(),'dijkstra',graphmap,connections=connections)
@@ -103,7 +103,7 @@ def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,online,agent_start=None
     for i in range(int(NUM_AGENTS)):
         # destt = random.choices(destinations,target_weights)[0]
         # destt = destinations[i%len(destinations)]
-        destt = destinations[1]
+        destt = destinations[5]
         dest = destt[0]
         agentid = 'agent'+str(i)+'_'+str(destt[1])
         agrouteid = agentid+'_route'
