@@ -147,10 +147,12 @@ def index2path_old(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
         return route # if decomment return 1 tab
 
 def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
+    verbose = False
     route = [] # if decomment return 1 tab
     ext = None
     needforworks = False
-    print('edge '+str(e.getID()))
+    if verbose:
+        print('edge '+str(e.getID()))
     if works:
         testext = build_path(mapdata,e.getID(),target_edge,index2alg(0)) # check if Dijkstra path includes wip areas
         if testext is not None:
@@ -161,13 +163,15 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
     if needforworks:
         # work areas detected in Dijkstra-based path, wip areas must be dodged
         if j<2:
-            print('works detected')
+            if verbose:
+                print('works detected')
             # print('algorithm, '+str(index2alg(j)))
             ext = build_path(mapdata,e.getID(),target_edge,index2alg(j)) # create path with Dijkstra or A* including wip areas
-            if ext is not None:
+            if ext is not None and verbose:
                 print('edge '+str(e.getID())+' path based on '+str(index2alg(j))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
         else: # for the other 2 behaviours
-            print('works detected')
+            if verbose:
+                print('works detected')
             fnode = [] # list of nodes to forbid while building paths
             fnode.extend(works) # exclude wip areas first
             alt = False
@@ -179,7 +183,7 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
             if not alt: # not running index 4 path
                 index = j-2
             ext = build_path(mapdata,e.getID(),target_edge,index2alg(index),forbidnode=fnode)
-            if ext is not None:
+            if ext is not None and verbose:
                 print('avoiding works')
                 if alt:
                     print('avoiding dijkstra')
@@ -192,9 +196,10 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
     if ext is None or not needforworks: # no work areas detected in general or in Dijkstra-based path, explore as much as possible
         # print('no works detected or no dodging possible')
         if j<2:
-            print('algorithm, '+str(index2alg(j)))
+            if verbose:
+                print('algorithm, '+str(index2alg(j)))
             ext = build_path(mapdata,e.getID(),target_edge,index2alg(j)) # create path with Dijkstra or A*
-            if ext is not None:
+            if ext is not None and verbose:
                 print('edge '+str(e.getID())+' path based on '+str(index2alg(j))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
         else: # for the other 2 behaviours
             # if e.getID() in dijkstrabased: # check if exploration is possible, so if an alternative route can lead to the destination
@@ -204,7 +209,7 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
             #         print('avoiding dijkstra with '+str(index2alg(j-2))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
             if ext is None or len(ext)==0: # no alternative route was found using Dijkstra or A* while excluding the first street
                 ext = build_path(mapdata,e.getID(),target_edge,index2alg(j)) # use BFS or Greedy BFS
-                if ext is not None:
+                if ext is not None and verbose:
                     print('edge '+str(e.getID())+' path based on '+str(index2alg(j))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
 
     # elif needforworks:
