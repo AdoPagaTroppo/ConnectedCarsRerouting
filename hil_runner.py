@@ -89,11 +89,11 @@ def reading_thread_file(mapdata):
 def take_first(elem):
     return elem[0]
 
-def find_closest_edge(mapdata):
-    
+def find_closest_edge(mapdata,path=None,start_edge=None):
+    print('FINDING CLOSEST EDGE')
     net = mapdata.net
     edgelist = mapdata.edgelist
-    radius = 5
+    radius = 20
     x, y = net.convertLonLat2XY(msg.lon, msg.lat) 
     ne_edges = net.getNeighboringEdges(x, y, radius,includeJunctions=False)
     # while len(ne_edges)==0:
@@ -103,13 +103,24 @@ def find_closest_edge(mapdata):
     #     pass
     distancesAndEdges_full = sorted([(dist, edge) for edge, dist in ne_edges], key=take_first)
     distancesAndEdges = []
+    print(path)
     for dae in distancesAndEdges_full:
-        # print(dae[1])
+        print(dae[1])
         if dae[1].allows('passenger'):
+            if path is None:
             # dist, closestEdge = dae
             # print(closestEdge)
             # break
-            distancesAndEdges.append(dae)
+                distancesAndEdges.append(dae)
+            else:
+                if dae[1].getID() in path:
+                    distancesAndEdges.append(dae)
+                else:
+                    if start_edge is not None:
+                        p2 = traci.simulation.findRoute(start_edge,dae[1].getID()).edges
+                        if len(p2)>0 and len(p2)<4:
+                            distancesAndEdges.append(dae)
+    print(distancesAndEdges)
     if len(distancesAndEdges)==0:
         return None,0,0
     dist, closestEdge = distancesAndEdges[0]
@@ -366,6 +377,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
         current_edge = None
         played_audio_edge = None
         played_for_crossing = False
+        indmin = -1
         while True:
             proceed = False
             move = False
@@ -404,97 +416,25 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                             # ADDITIONALLY, FIX AUDIO
                             old_x = x
                             old_y = y
-                            current_edge,x,y = find_closest_edge(mapdata)
-                            conn = mapdata.edgegraph
-                            rid = roadid if not roadid.__contains__(':') else next_edge[agent_car]
-                            print('roadid '+str(roadid)+' current_edge '+str(current_edge))
-                            print('current route '+str(list(traci.vehicle.getRoute(agent_car))))
-                            # if not current_edge.__contains__(':') and current_edge not in list(traci.vehicle.getRoute(agent_car)):
-                            #     print('resetting')
-                            #     traci.vehicle.setRoute(agent_car,paths_db[current_edge][agents[vehicle].targetIndex+indmin])
-                            keepRoute = 1
-                            tolerance = 15
                             checkr = None
-                            if not roadid.__contains__(':'):
+                            if agent_car in cl_prev_edge:
+                                if not roadid.__contains__(':'):
+                                    checkr = roadid
+                                else:
+                                    checkr = cl_prev_edge[agent_car]
+                            else:
                                 checkr = roadid
-                            else:
-                                checkr = cl_prev_edge[agent_car]
-                            if current_edge not in paths_db[checkr][agents[vehicle].targetIndex+indmin]:
-                                out_of_course_counter += 1
-                            else:
-                                out_of_course_counter = 0
-                            if current_edge.__contains__('-'):
-                                c_temp = current_edge.replace('-','')
-                                for con in conn[cl_prev_edge[agent_car]]:
-                                    print(con)
-                                    if con == c_temp:
-                                        current_edge = con
-                                        break
-                            else:
-                                for con in conn[cl_prev_edge[agent_car]]:
-                                    if con.replace('-','') == current_edge:
-                                        current_edge = con
-                                        break
-                            if not roadid.__contains__(':'):
-                                if roadid in conn:
-                                    pathfromroadid = list(traci.simulation.findRoute(current_edge,roadid).edges)
-                                    maxlen = 10
-                                    pathlen = 100 if len(pathfromroadid)==0 else calculate_pathlen_meters(pathfromroadid,mapdata)
-                                    
-                                    shouldmove = True
-                                    
-                                    if out_of_course_counter<tolerance:
-                                        shouldmove = False
-                                    # if roadid.__contains__('-'):
-                                    #     if current_edge == roadid.replace('-',''):
-                                    #         shouldmove = False
-                                    # else:
-                                    #     if current_edge.replace('-','') == roadid:
-                                    #         shouldmove = False
-                                    # if shouldmove:
-                                    #     shouldmove = len(pathfromroadid)>0
-                                    # if shouldmove:
-                                    #     shouldmove = abs(traci.edge.getAngle(current_edge)-traci.edge.getAngle(roadid))<30
-                                        # shouldmove = abs(traci.edge.getAngle(current_edge,))
-                                    
-                                    if shouldmove or current_edge == roadid:
-                                        move = True
-                                        keepRoute = 0
-                                        # if abs(traci.edge.getAngle(current_edge)-traci.edge.getAngle(roadid))>30:
-                                        #     keepRoute = 1
-                                        # if agent_car in cl_prev_edge:
-                                        #     pathfromprev = list(traci.simulation.findRoute(cl_prev_edge[agent_car],current_edge).edges)
-                                        #     pathlen2 = 100 if len(pathfromprev)==0 else calculate_pathlen_meters(pathfromprev,mapdata)
-                                        #     if (pathlen2<maxlen) or current_edge == cl_prev_edge[agent_car]:
-                                        #         keepRoute = 0
-                                        #     else:
-                                        #         keepRoute = 1
-                                        print('moving')
-                                        print(out_of_course_counter)
-                                    else:
-                                        move = False
-                                if not move and roadid!=current_edge and out_of_course_counter==0:
-                                    move = True
-                                    keepRoute = 0
-                            else:
-                                # if agent_car in cl_prev_edge:
-                                #     if cl_prev_edge[agent_car] in conn:
-                                #         if current_edge in conn[cl_prev_edge[agent_car]] or current_edge == cl_prev_edge[agent_car]:
-                                move = True
-                                if out_of_course_counter>0 and out_of_course_counter<tolerance:
-                                    move = False
-                                keepRoute = 0
-                            if move:
-                                # route = list(traci.vehicle.getRoute(agent_car))
-                                # if agent_car in cl_prev_edge:
-                                #     if current_edge!=route(route.index(cl_prev_edge[agent_car]+1)) and current_edge!=cl_prev_edge[agent_car]:
-                                #         print('entered')    
-                                #         traci.vehicle.changeTarget(agent_car,current_edge)
-                                traci.vehicle.moveToXY(agent_car,current_edge,-1,x,y,keepRoute=keepRoute)
-                                print('MOVING HERE')
-                    except:
+                            print(checkr)
+                            kR = 1
+                            current_edge,x,y = find_closest_edge(mapdata,path=(None if indmin<0 else paths_db[checkr][agents[vehicle].targetIndex+indmin]),start_edge=(None if indmin<0 or agent_car not in cl_prev_edge else cl_prev_edge[agent_car]))
+                            if current_edge is None:
+                                current_edge,x,y = find_closest_edge(mapdata)
+                                kR = 0    
+                            out_of_course_counter,move = move_car_on_road(mapdata,roadid,agent_car,cl_prev_edge,current_edge,None if indmin<0 else paths_db[checkr][agents[vehicle].targetIndex+indmin],x,y,old_x,old_y,out_of_course_counter,kR=kR)
+                    except TraCIException as e:
                         move = False
-                        print('exception here')
+                        traci.vehicle.setSpeed(agent_car,-1)
+                        print('exception here, '+str(e))
                             
                     vehicle_speed = traci.vehicle.getSpeed(vehicle)
                     vehicle_fuel = traci.vehicle.getFuelConsumption(vehicle)*STEP_SIZE
@@ -528,7 +468,13 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     print('roadid '+str(roadid))
                     if not roadid.__contains__(':'):
                         if vehicle not in cl_prev_edge or roadid!=cl_prev_edge[vehicle]:
-                            cl_prev_edge[vehicle] = roadid
+                            if vehicle.__contains__('agent'):
+                                if move:
+                                    cl_prev_edge[vehicle] = current_edge
+                                else:
+                                    cl_prev_edge[vehicle] = roadid
+                            else:
+                                cl_prev_edge[vehicle] = roadid
                     print('cl prev edge '+str(cl_prev_edge[vehicle]))
                     if agent_car==vehicle and current_edge is not None and move and not roadid.__contains__(':'):
                         roadid = cl_prev_edge[agent_car]
@@ -543,7 +489,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                     traci.edge.setParameter(roadid,'color',12)
                         traci.vehicle.setSpeed(vehicle,net.getEdge(roadid).getSpeed()/20)
                         # print(str(vehicle)+" TWEETED: hey, there's work in progress at "+str(roadid))
-                    elif roadid not in works:
+                    elif roadid not in works and vehicle!=agent_car:
                         traci.vehicle.setSpeed(vehicle,-1)
                     # traci.vehicle.setSpeed(agent_car,0.101)
                     if roadid in checkpoints:
@@ -636,8 +582,9 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                 selpath = paths_db[currentid][agents[vehicle].targetIndex+indmin]
                         if len(vn2)>2:
                             if NUM_AGENTS==1 and currentid==roadid and PLAY_AUDIO:
+                                # if prox_edge.getID()!=played_audio_edge:
                                 playAudio(mapdata,currentid,prox_edge,LANG,roundabout=(currentid in mapdata.streets_in_roundabouts))
-                                played_for_crossing = True
+                                    # played_audio_edge = prox_edge.getID()
                                 # vn3 = []
                                 # vn3.append(net.getEdge(prox_edge.getID()))
                                 # vn3.extend(valid_neighbors(net.getEdge(prox_edge.getID()),mapdata,end_edge[vehicle]))
@@ -645,6 +592,16 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                 #     even_next = paths_db[prox_edge.getID()][agents[vehicle].targetIndex+indmin][1]
                                 #     dist = int(net.getEdge(currentid).getLength()+net.getEdge(prox_edge.getID()).getLength())                                    
                                 #     playAudio(mapdata,currentid,net.getEdge(even_next),LANG,dist,prox_edge)
+                        else:
+                            if NUM_AGENTS==1 and PLAY_AUDIO and selpath is not None:
+                                print('enter here')
+                                true_play_audio, in_roundabout, dist, audio_edge, prev_audio_edge = search_next(mapdata,paths_db[currentid][agents[vehicle].targetIndex+indmin])
+                                if currentid in mapdata.streets_in_roundabouts:
+                                    true_play_audio = False
+                                if true_play_audio and audio_edge!=played_audio_edge:
+                                    print('true play audio')
+                                    playAudio(mapdata,currentid,net.getEdge(audio_edge),LANG,dist,net.getEdge(prev_audio_edge),in_roundabout,path=(None if not in_roundabout or paths_db[currentid] is None else paths_db[currentid][agents[vehicle].targetIndex+indmin]))
+                                    played_audio_edge = audio_edge
                         next_edge[vehicle] = prox_edge.getID()
                         if prox_edge.getID() == end_edge[vehicle]:
                             print(vehicle+' ARRIVED')
@@ -707,14 +664,14 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                             # traci.edge.setParameter(prox_edge.getID(),'color',colorvalue)
                             if vehicle in prev_edge:
                                 traci.edge.setParameter(prev_edge[vehicle],'color',0)
-                    if vehicle.__contains__('agent'):
-                        if NUM_AGENTS==1 and PLAY_AUDIO and selpath is not None:
-                            print('enter here')
-                            true_play_audio, in_roundabout, dist, audio_edge, prev_audio_edge = search_next(mapdata,paths_db[currentid][agents[vehicle].targetIndex+indmin])
-                            if true_play_audio and audio_edge!=played_audio_edge and not played_for_crossing:
-                                print('true play audio')
-                                playAudio(mapdata,currentid,net.getEdge(audio_edge),LANG,dist,net.getEdge(prev_audio_edge),in_roundabout,path=(None if not in_roundabout or paths_db[currentid] is None else paths_db[currentid][agents[vehicle].targetIndex+indmin]))
-                                played_audio_edge = audio_edge
+                    # if vehicle.__contains__('agent'):
+                    #     if NUM_AGENTS==1 and PLAY_AUDIO and selpath is not None:
+                    #         print('enter here')
+                    #         true_play_audio, in_roundabout, dist, audio_edge, prev_audio_edge = search_next(mapdata,paths_db[currentid][agents[vehicle].targetIndex+indmin])
+                    #         if true_play_audio and audio_edge!=played_audio_edge and not played_for_crossing:
+                    #             print('true play audio')
+                    #             playAudio(mapdata,currentid,net.getEdge(audio_edge),LANG,dist,net.getEdge(prev_audio_edge),in_roundabout,path=(None if not in_roundabout or paths_db[currentid] is None else paths_db[currentid][agents[vehicle].targetIndex+indmin]))
+                    #             played_audio_edge = audio_edge
                     prev_edge[vehicle] = roadid
                     if roadid not in passed[vehicle]:
                         passed[vehicle][roadid] = 1
@@ -801,3 +758,181 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     else:
         return None
 
+def move_car_on_road(mapdata,roadid,agent_car,cl_prev_edge,current_edge,path,x,y,old_x,old_y,out_of_course_counter,kR=1):
+    conn = mapdata.edgegraph
+    print('roadid '+str(roadid)+' current_edge '+str(current_edge))
+    print('current route '+str(list(traci.vehicle.getRoute(agent_car))))
+    # if not current_edge.__contains__(':') and current_edge not in list(traci.vehicle.getRoute(agent_car)):
+    #     print('resetting')
+    #     traci.vehicle.setRoute(agent_car,paths_db[current_edge][agents[vehicle].targetIndex+indmin])
+    keepRoute = 1
+    tolerance = 15
+    # checkr = None
+    # if agent_car in cl_prev_edge:
+    #     if not roadid.__contains__(':'):
+    #         checkr = roadid
+    #     else:
+    #         checkr = cl_prev_edge[agent_car]
+    #     if current_edge.__contains__('-'):
+    #         c_temp = current_edge.replace('-','')
+    #         for con in conn[cl_prev_edge[agent_car]]:
+    #             print(con)
+    #             if con == c_temp:
+    #                 current_edge = con
+    #                 break
+    #     else:
+    #         for con in conn[cl_prev_edge[agent_car]]:
+    #             if con.replace('-','') == current_edge:
+    #                 current_edge = con
+    #                 break
+    #     if current_edge not in path:
+    #         out_of_course_counter += 1
+    #         if out_of_course_counter>1 and math.sqrt((x-old_x)**2+(y-old_y)**2)<5 and roadid!=current_edge:
+    #             out_of_course_counter -= 1
+    #     else:
+    #         out_of_course_counter = 0
+    #         pathfromprev = list(traci.simulation.findRoute(cl_prev_edge[agent_car],current_edge).edges)
+    #         pathlen2 = 100 if len(pathfromprev)==0 else calculate_pathlen_meters(pathfromprev,mapdata)
+    #         if len(pathfromprev)>5 and roadid!=current_edge:
+    #             out_of_course_counter += 1
+        
+    # if not roadid.__contains__(':'):
+    #     if roadid in conn:
+    #         pathfromroadid = list(traci.simulation.findRoute(current_edge,roadid).edges)
+    #         maxlen = 10
+    #         pathlen = 100 if len(pathfromroadid)==0 else calculate_pathlen_meters(pathfromroadid,mapdata)
+            
+    #         shouldmove = True
+            
+    #         if out_of_course_counter>0 and out_of_course_counter<tolerance:
+    #             shouldmove = False
+    #         # if roadid.__contains__('-'):
+    #         #     if current_edge == roadid.replace('-',''):
+    #         #         shouldmove = False
+    #         # else:
+    #         #     if current_edge.replace('-','') == roadid:
+    #         #         shouldmove = False
+    #         # if shouldmove:
+    #         #     shouldmove = len(pathfromroadid)>0
+    #         # if shouldmove:
+    #         #     shouldmove = abs(traci.edge.getAngle(current_edge)-traci.edge.getAngle(roadid))<30
+    #             # shouldmove = abs(traci.edge.getAngle(current_edge,))
+            
+    #         if shouldmove or current_edge == roadid:
+    #             move = True
+    #             keepRoute = 0
+    #             # if abs(traci.edge.getAngle(current_edge)-traci.edge.getAngle(roadid))>30:
+    #             #     keepRoute = 1
+    #             # if agent_car in cl_prev_edge:
+    #             #     pathfromprev = list(traci.simulation.findRoute(cl_prev_edge[agent_car],current_edge).edges)
+    #             #     pathlen2 = 100 if len(pathfromprev)==0 else calculate_pathlen_meters(pathfromprev,mapdata)
+    #             #     if (pathlen2<maxlen) or current_edge == cl_prev_edge[agent_car]:
+    #             #         keepRoute = 0
+    #             #     else:
+    #             #         keepRoute = 1
+    #             print('moving')
+    #             print(out_of_course_counter)
+    #         else:
+    #             move = False
+    #     # if not move and roadid!=current_edge and out_of_course_counter==0:
+    #     #     move = True
+    #     #     keepRoute = 0
+    # else:
+    #     # if agent_car in cl_prev_edge:
+    #     #     if cl_prev_edge[agent_car] in conn:
+    #     #         if current_edge in conn[cl_prev_edge[agent_car]] or current_edge == cl_prev_edge[agent_car]:
+    #     move = True
+    #     if out_of_course_counter>0 and out_of_course_counter<tolerance:
+    #         move = False
+    #     keepRoute = 0
+    # print('out of course counter '+str(out_of_course_counter))
+    # print('old and new x and y: '+str(old_x)+', '+str(old_y)+'  '+str(x)+', '+str(y))
+    # if x == old_x and y == old_y:
+    #     traci.vehicle.setSpeed(agent_car,0)
+    # else:
+    #     traci.vehicle.setSpeed(agent_car,-1)
+    # if move:
+    #     # route = list(traci.vehicle.getRoute(agent_car))
+    #     # if agent_car in cl_prev_edge:
+    #     #     if current_edge!=route(route.index(cl_prev_edge[agent_car]+1)) and current_edge!=cl_prev_edge[agent_car]:
+    #     #         print('entered')    
+    #     #         traci.vehicle.changeTarget(agent_car,current_edge)
+    #     traci.vehicle.moveToXY(agent_car,current_edge,-1,x,y,keepRoute=keepRoute)
+    #     print('MOVING HERE')
+    r_prev_edge = agent_car in cl_prev_edge
+    a_prev_edge = None if not r_prev_edge else cl_prev_edge[agent_car]
+    move = False
+    crossing = roadid.__contains__(':')
+    if not r_prev_edge:
+        move = True
+        keepRoute = 0
+        out_of_course_counter = 0
+    else:
+        if x == old_x and y == old_y:
+            traci.vehicle.setSpeed(agent_car,0)
+            if r_prev_edge:
+                if current_edge!=a_prev_edge and not crossing:
+                    out_of_course_counter = 1
+                else:
+                    out_of_course_counter = 0
+                    move = True
+                    keepRoute = 0
+        else:
+            traci.vehicle.setSpeed(agent_car,-1)
+            if crossing:
+                move = True
+                keepRoute = 1
+            else:
+                # if current_edge.__contains__('-'):
+                #     c_temp = current_edge.replace('-','')
+                #     for con in conn[a_prev_edge]:
+                #         print('negedge '+str(con))
+                #         if con == c_temp:
+                #             current_edge = con
+                #             break
+                # else:
+                #     for con in conn[a_prev_edge]:
+                #         print('posedge '+str(con))
+                #         if con.replace('-','') == current_edge:
+                #             current_edge = con
+                #             break
+                if current_edge==roadid:
+                        
+                    move = True
+                    keepRoute = 0
+                else:
+                    if path is not None:
+                        if current_edge in path:
+                            if len(traci.simulation.findRoute(a_prev_edge,current_edge).edges)<5:
+                                move = True
+                                keepRoute = 0
+                                out_of_course_counter = 0
+                            else:
+                                if out_of_course_counter<tolerance:
+                                    move = False
+                                    out_of_course_counter += 1
+                                else:
+                                    move = True
+                                    out_of_course_counter = 0
+                        else:
+                            if out_of_course_counter<tolerance:
+                                move = False
+                                out_of_course_counter += 1
+                            else:
+                                move = True
+                                keepRoute = 0
+                                out_of_course_counter = 0
+                    else:
+                        move = True
+                        keepRoute = 0
+                        out_of_course_counter = 0
+    print('move: '+str(move))
+    print('oocc: '+str(out_of_course_counter))
+    print('current_edge: '+str(current_edge))
+    print('x,y:         '+str(x)+','+str(y))
+    print('old_x,old_y: '+str(old_x)+','+str(old_y))
+    if move:
+        print('trying to move')
+        traci.vehicle.moveToXY(agent_car,current_edge if not crossing else roadid,-1,x,y,keepRoute=kR)
+        print('MOVING HERE')
+    return out_of_course_counter,move
