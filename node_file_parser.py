@@ -1,5 +1,7 @@
-import os
+# Module containing methods for parsing specific files
 
+# method for loading data about target edges and source edges for vehicles, inputs are:
+# - file name
 def parse_file_for_nodes(filename):
     dataread = []
     targets = []
@@ -15,6 +17,8 @@ def parse_file_for_nodes(filename):
             sources.append(pieces[1])
     return targets,sources
 
+# method for loading edge ids of work-in-progress areas, inputs are:
+# - file name
 def parse_file_for_work(filename):
     works = {}
     dataread = []
@@ -24,7 +28,9 @@ def parse_file_for_work(filename):
         el = el.replace('\n','')
         works[el] = 0
     return works
-    
+
+# method for loading data related to checkpoints (THIS WILL PROBABLY BE REMOVED AS IT IS UNNECESSARY), inputs are:
+# - file name
 def parse_file_for_checkpoints(filename):
     dataread = []
     targets = []

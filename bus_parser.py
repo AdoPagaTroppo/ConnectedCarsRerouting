@@ -1,8 +1,13 @@
+# Module for obtaining data about buses from Busitalia official CSV files for lines in the province of Salerno
+
 import os
 
+# method for obtaining data of buses crossing the areas of interest, with starting edges, ending edges and depart times, inputs are:
+# - the hour from which to start considering the lines,
+# - the geographic area to take into account
 def bus_parser(starttime,scenario):
     searchstring = 'UNIVERSITA' if scenario=='Unisa' else 'VINCIPROVA'
-    code = '15' if scenario=='Unisa' else '02'
+    code = '15' if scenario=='Unisa' else '02' # codes for "Feriali" lines
     data = []
     buslines = {}
     with open('oraripullman.csv','r',errors='ignore') as f:
@@ -10,6 +15,7 @@ def bus_parser(starttime,scenario):
     currentline = ''
     valindexes = []
     index = 0
+    # build data structure of bus routes by reading the content of the CSV file and saving times, start and destination streets
     for el in data:
         stringels = el.split(';')
         if stringels[0].__contains__('Linea'):
@@ -34,14 +40,10 @@ def bus_parser(starttime,scenario):
                     index += 1
         
     usefulbuslines = {}
-            
+    # filter obtained bus lines by the depart time, including only lines between the input start time and 3 hours later (a simulation is not expected to last more than 3 hours)
     for p in buslines:
-        # print(p)
         for i in buslines[p]:
-            # print('Route '+str(i+1))
             for j in buslines[p][i]:
-                # print(buslines[p][i])
-                # for k in range(len(buslines[p][i])):
                 try:
                     hour = int(j[1].split(':')[0])
                     if j[0].__contains__(searchstring) and (hour<starttime+4 and hour>starttime-1):
@@ -52,14 +54,12 @@ def bus_parser(starttime,scenario):
                         usefulbuslines[p][i] = buslines[p][i]
                 except:
                     pass
-
+    # turn filtered bus lines data into SUMO-compatible data, by turning street names into edges and converting the times into counter values for simulation steps
     buss = {}
     for p in usefulbuslines:
-        # print(p)    
         for i in usefulbuslines[p]:
             source = None
             l = []
-            # print('Route '+str(i+1))
             for j in usefulbuslines[p][i]:
                 if source is None:
                     if j[0].__contains__(searchstring):
@@ -74,12 +74,14 @@ def bus_parser(starttime,scenario):
                     else:
                         if j==usefulbuslines[p][i][-1]:
                             l.append((lineend(p,'to',j[0]),calculate_counter(starttime,j[1],True)))
-                # print(j)
             if source is None:
                 print("source is still none for "+str(i+1))
             buss[(l[0][1],p)] = l
     return buss
-                
+
+# method for obtaining edge id of notable areas (usually starting edges), inputs are: 
+# - the string containing the stop name, 
+# - the scenario of the simulation    
 def source2edge(source,scenario):
     if source == "FISCIANO UNIVERSITA'":
         return "-392822665#5"           
@@ -89,6 +91,10 @@ def source2edge(source,scenario):
         return "398058811#0"
     return 'unk'
 
+# method for obtaining edge ids of the stops of different bus lines, inputs are: 
+# - string containing the name of the bus line, 
+# - direction of the bus line ('to' is related to 'Discendente' lines, 'from' is related to 'Ascendente' lines), 
+# - additional stop names for more precise routes (optional)
 def lineend(source,direction,additional=None):
     if source.__contains__('017'):
         return "1084284613" if direction=='to' else "1084284608"
@@ -145,6 +151,10 @@ def lineend(source,direction,additional=None):
     elif source.__contains__('050'):
         return "102235300#2" if direction=='to' else "-102235300#2"
 
+# method for calculating the counter for simulation step of specific lines, inputs are: 
+# - the starting time of the simulation, 
+# - the time to turn into counter value, 
+# - flag to specify if bus line is supposed to enter the map before the start time (optional)
 def calculate_counter(starttime,giventime,notuni=False):
     givsplit = giventime.split(':')
     h = int(givsplit[0])-starttime

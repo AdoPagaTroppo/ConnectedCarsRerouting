@@ -1,11 +1,76 @@
-import os
-import plotter
-import numpy as np
-import math
+# Module gathering all scripts and methods for plotting the results of the simulations
 
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+
+# method for plotting the average of a metric with its standard deviation, inputs are:
+# - x axis values,
+# - array of averages,
+# - array of standard deviations,
+# - plot title
+# - flag to establish whether the plots needs to be saved as a image or not,
+# - the image folder in which the image must be eventually saves,
+# - the number of cars in the simulation sequence,
+# - the time horizon for the crowdsourcing algorithm used for the simulations,
+# - measure unit for the plot
+def plotter(x,avg_array,std_array,title,save_fig,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,unit):
+    showplots = False
+    avg_array = np.array(avg_array)
+    std_array = np.array(std_array)
+    plt.style.use('ggplot')
+    fig, ax = plt.subplots(figsize=(10,5))
+    ax.plot(x,avg_array,color='red',label=str(title).lower().replace('_',' '))
+    ax.fill_between(x,avg_array-std_array,avg_array+std_array,color='#888888', alpha=0.4)
+    # plt.plot(array)
+    ax.set_title(str(title)+' and controlled cars')
+    ax.set_xlabel('Percentage of controlled cars')
+    ax.set_ylabel('Average '+str(title)+' '+str(unit))
+    ax.legend(loc='best')
+    if save_fig:
+        fig.savefig(IMG_FOLDER+str(NUMBER_OF_CARS)+'cars_'+str(TIME_HORIZON)+'hor_'+str(title).lower().replace(' ','_')+'.png')
+    if showplots:
+        plt.show()
+
+# method for plotting the average of a metric with its standard deviation, inputs are:
+# - x axis values,
+# - array of averages of controlled cars,
+# - array of standard deviations of controlled cars,
+# - array of averages of uncontrolled cars,
+# - array of standard deviations of uncontrolled cars,
+# - plot title
+# - flag to establish whether the plots needs to be saved as a image or not,
+# - the image folder in which the image must be eventually saves,
+# - the number of cars in the simulation sequence,
+# - the time horizon for the crowdsourcing algorithm used for the simulations
+def versus_plotter(x,avg_array1,std_array1,avg_array2,std_array2,title,save_fig,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON):
+    showplots = False
+    avg_array1 = np.array(avg_array1)
+    std_array1 = np.array(std_array1)
+    avg_array2 = np.array(avg_array2)
+    std_array2 = np.array(std_array2)
+    plt.style.use('ggplot')
+    fig, ax = plt.subplots(figsize=(10,5))
+    ax.plot(x,avg_array1,color='red',label='average '+str(title).lower().replace(' ','_')+' of controlled cars')
+    ax.fill_between(x,avg_array1-std_array1,avg_array1+std_array1,color='#888888', alpha=0.4)
+    ax.plot(x,avg_array2,color='blue',label='average '+str(title).lower().replace(' ','_')+' of uncontrolled cars')
+    ax.fill_between(x,avg_array2-std_array2,avg_array2+std_array2,color='#888888', alpha=0.4)
+    # plt.plot(array)
+    ax.set_title(str(title)+' and controlled cars')
+    ax.set_xlabel('Number of controlled cars')
+    ax.set_ylabel('Average '+str(title))
+    ax.legend(loc='best')
+    if save_fig:
+        fig.savefig(IMG_FOLDER+str(NUMBER_OF_CARS)+'cars_'+str(TIME_HORIZON)+'hor_'+str(title).lower().replace(' ','_')+'versus.png')
+    if showplots:
+        plt.show()
+
+# UNUSED METHOD, WILL PROBABLY BE REMOVED
 def remove_errors(payload):
     return [x for x in payload if x>=0]
 
+# method for plotting the different metrics on a global scale and in comparison between controlled and uncontrolled vehicles, inputs are:
+# - a flag for selecting between plotting data related to all simulations or data related to one run (optional)
 def elaborate_and_make_plots(TIMEDATA=False):
 
     SAVE_IMG=True
@@ -15,7 +80,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
     filelist = os.listdir(DATA_SOURCE)
     print(filelist)
     if not TIMEDATA:
-        filelist = [x for x in filelist if not x.__contains__('_timedata')]
+        filelist = [x for x in filelist if not x.__contains__('_timedata')] # filter files to use
         example_name = os.listdir(DATA_SOURCE)[0].split('.')[0].split('_')
         numberofsim = 0
         numberofparams = 0
@@ -37,12 +102,15 @@ def elaborate_and_make_plots(TIMEDATA=False):
         print(str(numberofruns)+' '+str(numberofsim)+' '+str(numberofparams))
         NUMBER_OF_CARS = int(example_name[2].replace('cars',''))
         TIME_HORIZON = int(example_name[3].replace('hor',''))
-        step_perc = 0.1 # 1/(numberofruns-1)
+        # prepare x axis
+        step_perc = 1/(numberofruns-1)
         x_axis = []
         for i in range(numberofruns):
             x_axis.append(step_perc*i*100)
 
         print(x_axis)
+
+        # prepare data structures for all plots
         speedsplot = [0]*numberofruns
         speedsplot_std = [0]*numberofruns
         fuels = [0]*numberofruns
@@ -79,7 +147,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
         foeco2em_std = [0]*numberofruns
         foetraveltimes = [0]*numberofruns
         foetraveltimes_std = [0]*numberofruns
-
+        # update data structures for the different metrics
         for run in range(numberofruns):
             runfile = -1
             sim_speeds = []
@@ -246,8 +314,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
             foetraveltimes_std[runfile] = (np.std(sim_travel_foe))
                     
             
-        print(speedsplot)
-            
+        # create plots    
         plotter.plotter(x_axis,speedsplot,speedsplot_std,'speed',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[m/s]')
         plotter.plotter(x_axis,fuels,fuels_std,'fuel consumption',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[mg/s]')
         plotter.plotter(x_axis,waitingtimes,waitingtimes_std,'waiting times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[s]')

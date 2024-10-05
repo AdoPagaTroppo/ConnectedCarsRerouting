@@ -1,3 +1,5 @@
+# Script to create plots of time measurements for evaluating crowdsourcing algorithm computation performances
+
 import matplotlib.pyplot as plt
 import numpy as np
 

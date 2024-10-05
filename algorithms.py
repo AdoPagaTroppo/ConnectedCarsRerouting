@@ -1,3 +1,5 @@
+# Module for gathering all path planning algorithms scripts
+
 from queue import PriorityQueue
 from queue import Queue
 import math
@@ -6,11 +8,14 @@ from colors import alg_color
 from colors import getIfromRGB
 import time
 
-ANIMATION = False
-TSTEP = 0.01
+ANIMATION = False # change to True if visual representation of how the algorithm works is required (warning, traCI must also be opened somewhere else in the script calling the following methods)
+TSTEP = 0.01 # time step for path planning animation
 
+# method to check if connection between two edges exists, inputs are:
+# - the nodes at the extremes of the edges, 
+# - a dictionary containing infos about the connections, 
+# - an edge to use as placeholder if node1 is None (if the first edge of the path is being considered) (optional)
 def connection_exists(node1,node2,node3,graphdict,connections,edge=None):
-    # print(node1+" "+node2+" "+node3)
     try:
         edge1 = None
         if node1 is None:
@@ -19,12 +24,18 @@ def connection_exists(node1,node2,node3,graphdict,connections,edge=None):
             edge1 = graphdict[node1][node2]
         edge2 = graphdict[node2][node3]
         if edge2[0] in connections[edge1[0]] :
-        # or edge1[0] in connections[edge2[0]]:
-            return True
+            return True # if connection between edge1 and edge2 exists, return True
     except:
-        return False
-    return False
+        return False # if an edge has no connections or if any exception related to malformed data structures occurs, return False
+    return False # if no connection was found, return False
 
+# "gate" method for requiring path building, inputs are:
+# - data structure containing all static data related to the map,
+# - node/edge from which to start building the path,
+# - node/edge that must be reached by the path,
+# - a string defining the path planning algorithm to call,
+# - a list containing nodes that must be avoided by the path planning algorithm (optional),
+# - edge for aiding in checking existing connections (optional)
 def build_path(mapdata,start,goal,type,forbidnode=None,edge=None):
     graphdict = mapdata.graphdict
     connections = mapdata.connections
@@ -48,7 +59,13 @@ def build_path(mapdata,start,goal,type,forbidnode=None,edge=None):
         return edge_astar(mapdata,start,goal,forbidnode)
     return None
 
-def bfs(graphdict,start,goal,connections,edge):
+# method for calling BFS algorithm with focus on the nodes of the graph, inputs are: 
+# - data structure containing data about the road network graph, 
+# - start node of the path to find, 
+# - goal node of the path to find, 
+# - dictionary containing infos about the connections between edges,
+# - edge for aiding in checking existing connections (optional)
+def bfs(graphdict,start,goal,connections,edge=None):
     if start == goal:
         return ['SUCC']
     frontier = PriorityQueue()
@@ -66,7 +83,6 @@ def bfs(graphdict,start,goal,connections,edge):
                 frontier.put(dests)
                 came_from[dests] = current
     if goal_found:
-        print('I actually found the goal')
         path = []
         path.append(graphdict[came_from[goal]][goal][0])
         current = came_from[goal]
@@ -78,6 +94,13 @@ def bfs(graphdict,start,goal,connections,edge):
     else:
         return None
 
+# method for calling Dijkstra algorithm with focus on the nodes of the graph, inputs are: 
+# - data structure containing data about the road network graph, 
+# - start node of the path to find, 
+# - goal node of the path to find, 
+# - a list containing nodes that must be avoided by the path planning algorithm (optional),
+# - dictionary containing infos about the connections between edges (optional),
+# - edge for aiding in checking existing connections (optional)
 def dijkstra(graphdict,start,goal,forbidnode=None,connections=None,edge=None):
     frontier = PriorityQueue()
     frontier.put(start,0)
@@ -96,7 +119,6 @@ def dijkstra(graphdict,start,goal,forbidnode=None,connections=None,edge=None):
             if (dests!=forbidnode and current == start) or current!=start:
                 new_cost = float(cost_so_far[current])+float(graphdict[current][dests][1])
                 if (dests not in cost_so_far or new_cost<cost_so_far[dests]) and connection_exists(came_from[current],current,dests,graphdict,connections,edge=edge):
-                # if (dests not in cost_so_far or new_cost<cost_so_far[dests]):
                     frontier.put(dests,new_cost)
                     i += 1
                     came_from[dests] = current
@@ -115,14 +137,25 @@ def dijkstra(graphdict,start,goal,forbidnode=None,connections=None,edge=None):
     else:
         return None
 
+# method for de-coupling heuristic between codes of Greedy BFS and A* algorithms and how the heuristic is integrated (in this case the heuristic is euclidean distance between nodes), inputs are: 
+# - first node for calculation of euclidean distance,
+# - second node for calculation of euclidean distance,
+# - data structure containing coordinates data about the road network graph
 def heuristic(n0,n1,graphmap):
     n0x = float(graphmap[n0][0])
     n1x = float(graphmap[n1][0])
     n0y = float(graphmap[n0][1])
     n1y = float(graphmap[n1][1])
-    hvalue = math.sqrt((n0x-n1x)**2+(n0y-n1y)**2)
+    hvalue = math.sqrt((n0x-n1x)**2+(n0y-n1y)**2) # euclidean distance between node coordinates
     return hvalue
 
+# method for calling Greedy BFS algorithm with focus on the nodes of the graph, inputs are: 
+# - data structure containing data about the road network graph, 
+# - start node of the path to find, 
+# - goal node of the path to find, 
+# - data structure containing coordinates data about the road network graph,
+# - dictionary containing infos about the connections between edges (optional),
+# - edge for aiding in checking existing connections (optional)
 def greedybfs(graphdict,start,goal,graphmap,connections,edge=None):
     if start == goal:
         return ['SUCC']
@@ -154,6 +187,14 @@ def greedybfs(graphdict,start,goal,graphmap,connections,edge=None):
     else:
         return None
 
+# method for calling A* algorithm with focus on the nodes of the graph, inputs are: 
+# - data structure containing data about the road network graph, 
+# - start node of the path to find, 
+# - goal node of the path to find, 
+# - data structure containing coordinates data about the road network graph,
+# - a list containing nodes that must be avoided by the path planning algorithm (optional),
+# - dictionary containing infos about the connections between edges (optional),
+# - edge for aiding in checking existing connections (optional)
 def astar(graphdict,start,goal,graphmap,forbidnode=None,connections=None,edge=None):
     frontier = PriorityQueue()
     frontier.put(start,0)
@@ -176,8 +217,6 @@ def astar(graphdict,start,goal,graphmap,forbidnode=None,connections=None,edge=No
                     i += 1
                     came_from[dests] = current
                     cost_so_far[dests] = new_cost
-    # print(source+" "+dest)
-    # print(goal_found)
     if goal_found:
         path = []
         if came_from[goal] is None:
@@ -192,6 +231,11 @@ def astar(graphdict,start,goal,graphmap,forbidnode=None,connections=None,edge=No
     else:
         return None
 
+# method for calling BFS algorithm with focus on the edges of the graph, inputs are: 
+# - start edge of the path to find, 
+# - goal edge of the path to find, 
+# - dictionary containing infos about the graph built between edges,
+# - a list containing nodes that must be avoided by the path planning algorithm (optional)
 def edge_bfs(start,goal,edgegraph,forbidnode=None):
     if start == goal:
         return ['SUCC']
@@ -226,6 +270,11 @@ def edge_bfs(start,goal,edgegraph,forbidnode=None):
     else:
         return None
     
+# method for calling Greedy BFS algorithm with focus on the edges of the graph, inputs are: 
+# - data structure containing all static data related to the map,
+# - start edge of the path to find, 
+# - goal edge of the path to find, 
+# - a list containing nodes that must be avoided by the path planning algorithm (optional)
 def edge_greedybfs(mapdata,start,goal,forbidnode=None):
     edgegraph = mapdata.edgegraph
     graphmap = mapdata.graphmap
@@ -263,6 +312,11 @@ def edge_greedybfs(mapdata,start,goal,forbidnode=None):
     else:
         return None
     
+# method for calling Dijkstra algorithm with focus on the edges of the graph, inputs are: 
+# - data structure containing all static data related to the map,
+# - start edge of the path to find, 
+# - goal edge of the path to find, 
+# - a list containing nodes that must be avoided by the path planning algorithm (optional)
 def edge_dijkstra(mapdata,start,goal,forbidnode=None):
     if start == goal:
         return ['SUCC']
@@ -280,7 +334,6 @@ def edge_dijkstra(mapdata,start,goal,forbidnode=None):
         popel = frontier.get()
         current = popel[1]
         if current == goal:
-            # print('GOAL FOUND')
             goal_found = True
             break
         if ANIMATION and not goal_found:
@@ -290,8 +343,6 @@ def edge_dijkstra(mapdata,start,goal,forbidnode=None):
                 traci.simulationStep()
         for dests in edgegraph[current]:
             if forbidnode is None or (forbidnode is not None and dests not in forbidnode):
-                # new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength())
-                # new_cost=float(cost_so_far[current])+float(traci.edge.getTraveltime(dests))
                 new_cost=float(cost_so_far[current])+edge_cost(mapdata,dests)
                 if dests not in cost_so_far or new_cost<cost_so_far[dests]:
                     frontier.put((new_cost,dests))
@@ -309,6 +360,11 @@ def edge_dijkstra(mapdata,start,goal,forbidnode=None):
     else:
         return None
     
+# method for calling A* algorithm with focus on the edges of the graph, inputs are: 
+# - data structure containing all static data related to the map,
+# - start edge of the path to find, 
+# - goal edge of the path to find, 
+# - a list containing nodes that must be avoided by the path planning algorithm (optional)
 def edge_astar(mapdata,start,goal,forbidnode=None):
     if start == goal:
         return ['SUCC']
@@ -334,8 +390,6 @@ def edge_astar(mapdata,start,goal,forbidnode=None):
             traci.simulationStep()
         for dests in edgegraph[current]:
             if forbidnode is None or (forbidnode is not None and dests not in forbidnode):
-                # new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength())
-                # new_cost=float(cost_so_far[current])+float(net.getEdge(dests).getLength()/net.getEdge(dests).getSpeed())
                 new_cost=float(cost_so_far[current])+edge_cost(mapdata,dests)
                 if dests not in cost_so_far or new_cost<cost_so_far[dests]:
                     frontier.put((new_cost+heuristic(net.getEdge(dests).getToNode().getID(),net.getEdge(goal).getToNode().getID(),graphmap),dests))
@@ -353,11 +407,11 @@ def edge_astar(mapdata,start,goal,forbidnode=None):
     else:
         return None
 
-
+# method for de-coupling heuristic between codes of algorithms and how the cost is integrated, inputs are: 
+# - data structure containing all static data related to the map,
+# - edge of which cost must be evaluated
 def edge_cost(mapdata,edge):
-    maxprio = mapdata.maxprio
-    minprio = mapdata.minprio
     net = mapdata.net
-    return float(net.getEdge(edge).getLength()/net.getEdge(edge).getSpeed())
-    # return traci.edge.getTraveltime(edge)
+    return float(net.getEdge(edge).getLength()/net.getEdge(edge).getSpeed()) # use travel time of edge using static data
+    # return traci.edge.getTraveltime(edge) # use travel time calculated by TraCI (same values as the static data, it slows down computation because of TraCI requests)
     

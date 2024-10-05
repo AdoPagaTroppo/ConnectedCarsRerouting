@@ -1,94 +1,101 @@
+# Module for gathering all scripts related to the creation and update of behaviours and paths
+
 import numpy as np
 import traci
 import os
 import sys
 import sumolib
-from sumolib.net import readNet
-from algorithms import connection_exists
-from node_file_parser import parse_file_for_nodes
-from graph_util import build_graph
 from algorithms import build_path
 from colors import *
 
+# method for calculating length of a path in terms of travel time, inputs are: 
+# - path whose length must be evaluated, 
+# - list of work-in-progress areas, 
+# - data structure containing all static data related to the map
 def calculate_pathlen(path,works,mapdata):
     worksweight = 20
     net = mapdata.net
     pathlen = 0
     for j in path:
-        if j!='SUCC':
-            # pathlen += traci.edge.getTraveltime(j)*(1 if j not in works else 10) # keep track of signalled wip areas
-            pathlen += net.getEdge(j).getLength()/net.getEdge(j).getSpeed()*(1 if j not in works else worksweight)
+        if j!='SUCC': # length of path must be calculated only for edges, when achieving success path planning algorithms also add 'SUCC'
+            # pathlen += traci.edge.getTraveltime(j)*(1 if j not in works else 10) # use TraCI travel times (same as static travel times)
+            pathlen += net.getEdge(j).getLength()/net.getEdge(j).getSpeed()*(1 if j not in works else worksweight) # use static travel times
     return pathlen
 
+# method for calculating length of a path in terms of meters, inputs are: 
+# - path whose length must be evaluated, 
+# - data structure containing all static data related to the map
+def calculate_pathlen_meters(path,mapdata):
+    net = mapdata.net
+    pathlen = 0
+    for j in path:
+        if j!='SUCC': # length of path must be calculated only for edges, when achieving success path planning algorithms also add 'SUCC'
+            pathlen += net.getEdge(j).getLength() # use static length
+    return pathlen
+
+# method for obtaining list of valid neighbours of an edge, inputs are:
+# - edge of which neighbours must be found,
+# - data structure containing all static data related to the map,
+# - target edge of the vehicle looking for valid neighbours (if None, all neighbours of the edge are taken into account)(optional),
+# - edgesto ignore while looking for neighbours (optional),
+# - flag for taking into account neighbours on the opposite driving direction too (if False, only reachable neighbours are taken into account)(optional)
 def valid_neighbors(edge,mapdata,target=None,forbid=None,checkIngoing=False):
-    #get only valid turns for the given edge
-    graphdict = mapdata.graphdict
-    connections = mapdata.connections
     edgegraph = mapdata.edgegraph
     res = []
     n1 = edge.getToNode()
     for e in n1.getOutgoing():
-        # if e.getID()!=edge.getID() and e.allows('passenger') and connection_exists(edge.getFromNode().getID(),e.getFromNode().getID(),e.getToNode().getID(),graphdict,connections):
         if e.getID()!=edge.getID() and e.allows('passenger') and e.getID() in edgegraph[edge.getID()]:
-            if target is None:
+            if target is None: # every edge is considered valid
                 res.append(e)
             else:
-                if not mapdata.edge2target[e.getID()][target][0]:
+                if not mapdata.edge2target[e.getID()][target][0]: # update data structure keeping track of which edge can reach which target for efficiency
                     mapdata.edge2target[e.getID()][target] = (True,False,[])
                     path = traci.simulation.findRoute(e.getID(),target).edges
-                    if len(path)>0:
-                        mapdata.edge2target[e.getID()][target] = (True,True,list(path))
-                        if forbid is None:
+                    if len(path)>0: # target is reachable by the edge
+                        mapdata.edge2target[e.getID()][target] = (True,True,list(path)) # update data structure to signal reachability
+                        if forbid is None: # every edge reaching the target is considered valid
                             res.append(e)
                         else:
-                            if forbid not in path:
+                            if forbid not in path: # include edge only if the path is not taking into account a forbidden edge
                                 res.append(e)
-                    else:
+                    else: # target is unreachable, update data structure to signal unreachability
                         mapdata.edge2target[e.getID()][target] = (True,False,[])
-                else:
-                    if mapdata.edge2target[e.getID()][target][1]:
-                        if forbid is None:
+                else: # data structure is already updated
+                    if mapdata.edge2target[e.getID()][target][1]: # if edge can reach the target
+                        if forbid is None: # no edge is forbidden, include this neighbour
                             res.append(e)
                         else:
-                            if forbid not in mapdata.edge2target[e.getID()][target][2]:
+                            if forbid not in mapdata.edge2target[e.getID()][target][2]: # include edge only if the path is not taking into account a forbidden edge
                                 res.append(e)
-    if checkIngoing:
+    if checkIngoing: # take into account opposite direction edges too
         for e in n1.getIncoming():
-            # if e.getID()!=edge.getID() and e.allows('passenger') and connection_exists(edge.getFromNode().getID(),e.getFromNode().getID(),e.getToNode().getID(),graphdict,connections):
             if e.getID()!=edge.getID() and e.allows('passenger') and e.getID() in edgegraph[edge.getID()]:
-                if target is None:
+                if target is None: # every edge is considered valid
                     res.append(e)
                 else:
-                    if not mapdata.edge2target[e.getID()][target][0]:
+                    if not mapdata.edge2target[e.getID()][target][0]: # update data structure keeping track of which edge can reach which target for efficiency
                         mapdata.edge2target[e.getID()][target] = (True,False,[])
                         path = traci.simulation.findRoute(e.getID(),target).edges
-                        if len(path)>0:
-                            mapdata.edge2target[e.getID()][target] = (True,True,list(path))
-                            if forbid is None:
+                        if len(path)>0: # target is reachable by the edge
+                            mapdata.edge2target[e.getID()][target] = (True,True,list(path)) # update data structure to signal reachability
+                            if forbid is None: # every edge reaching the target is considered valid
                                 res.append(e)
                             else:
-                                if forbid not in path:
+                                if forbid not in path: # include edge only if the path is not taking into account a forbidden edge
                                     res.append(e)
-                        else:
+                        else: # target is unreachable, update data structure to signal unreachability
                             mapdata.edge2target[e.getID()][target] = (True,False,[])
-                    else:
-                        if mapdata.edge2target[e.getID()][target][1]:
-                            if forbid is None:
+                    else: # data structure is already updated
+                        if mapdata.edge2target[e.getID()][target][1]: # if edge can reach the target
+                            if forbid is None: # no edge is forbidden, include this neighbour
                                 res.append(e)
                             else:
-                                if forbid not in mapdata.edge2target[e.getID()][target][2]:
-                                    res.append(e)
-                    
-                    
+                                if forbid not in mapdata.edge2target[e.getID()][target][2]: # include edge only if the path is not taking into account a forbidden edge
+                                    res.append(e)     
     return(res)
 
-def valid_neighbors_lengths(edges,target=None):
-    #get only valid turns for the given edge
-    res = {}
-    for e in edges:
-        res[e] = traci.simulation.findRoute(e.getID(),target).length
-    return(res)
-
+# utility method for turning index into string defining the type of algorithm to call, inputs are:
+# - index to turn into string
 def index2alg(index):
     if index==0:
         return 'e_dijkstra'
@@ -99,56 +106,15 @@ def index2alg(index):
     if index==3:
         return 'e_greedybfs'
     
-def index2path_old(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
-        route = [] # if decomment return 1 tab
-    # if j == 0:
-    #     route = traci.simulation.findRoute(e.getID(), target_edge).edges
-    # elif j == 1:
-    #     route = traci.simulation.findRoute(e.getID(), target_edge, "routerByDistance").edges
-    # else:
-        ext = None
-        # route.append(e.getID())
-        # ext = build_path(graphdict,e.getToNode().getID(),endnode,index2alg(j),graphmap=graphmap,connections=connections,edge=e.getID())
-        # ext = build_path(mapdata,e.getToNode().getID(),endnode,index2alg(j),edge=e.getID())
-        # if e.getID() in dijkstrabased and e.getID() in works:
-        #     ext1 = build_path(mapdata,e.getID(),target_edge,index2alg(j),forbidnode=dijkstrabased[e.getID()])
-        #     if ext1 is None:
-        #         ext2 = build_path(mapdata,e.getID(),target_edge,index2alg(j))
-        #         ext = ext2
-        #     else:
-        #         ext = ext1
-        # else:
-        if not works:
-            ext = build_path(mapdata,e.getID(),target_edge,index2alg(j))
-        else:
-            print('you sure no work?')
-            if works:
-                if j<2:
-                    ext = build_path(mapdata,e.getID(),target_edge,index2alg(j))
-                else:
-                    testext = build_path(mapdata,e.getID(),target_edge,index2alg(0))
-                    needforworks = False
-                    for ed in works:
-                        if ed in testext:
-                            needforworks = True
-                            break
-                    ext = None
-                    if needforworks:
-                        ext = build_path(mapdata,e.getID(),target_edge,index2alg(j-2),forbidnode=works)
-                    else:
-                        ext = build_path(mapdata,e.getID(),target_edge,index2alg(j))
-                    if ext is None:
-                        ext = build_path(mapdata,e.getID(),target_edge,index2alg(j))
-        if ext is None:
-            route = None
-        else:
-            if 'SUCC' not in ext:
-                route.extend(ext)
-        return route # if decomment return 1 tab
-
-def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
-    verbose = False
-    route = [] # if decomment return 1 tab
+# method for building paths according to index and target, inputs are: 
+# - index to turn into string, 
+# - target edge of the path to build, 
+# - start edge of the path to build, 
+# - data structure containing all static data related to the map, 
+# - list of work-in-progress areas (optional)
+def index2path(j,target_edge,e,mapdata,works=None):
+    verbose = False # set to True for debugging
+    route = []
     ext = None
     needforworks = False
     if verbose:
@@ -165,7 +131,6 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
         if j<2:
             if verbose:
                 print('works detected')
-            # print('algorithm, '+str(index2alg(j)))
             ext = build_path(mapdata,e.getID(),target_edge,index2alg(j)) # create path with Dijkstra or A* including wip areas
             if ext is not None and verbose:
                 print('edge '+str(e.getID())+' path based on '+str(index2alg(j))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
@@ -173,28 +138,13 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
             if verbose:
                 print('works detected')
             fnode = [] # list of nodes to forbid while building paths
-            fnode.extend(works) # exclude wip areas first
-            alt = False
-            index = 0 # run Dijkstra by default
-            # if j==3:
-            #     if e.getID() in dijkstrabased: # explore and exclude both wip areas and first street of Dijkstra-built path
-            #         fnode.append(dijkstrabased[e.getID()])
-            #         alt = True
-            if not alt: # not running index 4 path
-                index = j-2
+            fnode.extend(works) # exclude wip areas
+            index = j-2 # run Dijkstra or A* excluding wip areas
             ext = build_path(mapdata,e.getID(),target_edge,index2alg(index),forbidnode=fnode)
             if ext is not None and verbose:
                 print('avoiding works')
-                if alt:
-                    print('avoiding dijkstra')
-                else:
-                    if j == 2:
-                        print('with dijkstra')
-                    else:
-                        print('with astar')
     # if path has yet to be found or no wip areas detected in Dijkstra-based path
-    if ext is None or not needforworks: # no work areas detected in general or in Dijkstra-based path, explore as much as possible
-        # print('no works detected or no dodging possible')
+    if ext is None or not needforworks: # no work areas detected in general, explore as much as possible
         if j<2:
             if verbose:
                 print('algorithm, '+str(index2alg(j)))
@@ -202,41 +152,21 @@ def index2path(j,target_edge,e,mapdata,dijkstrabased=None,works=None):
             if ext is not None and verbose:
                 print('edge '+str(e.getID())+' path based on '+str(index2alg(j))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
         else: # for the other 2 behaviours
-            # if e.getID() in dijkstrabased: # check if exploration is possible, so if an alternative route can lead to the destination
-            #     fnode = [dijkstrabased[e.getID()]]
-            #     ext = build_path(mapdata,e.getID(),target_edge,index2alg(j-2),forbidnode=fnode) # search for a route excluding Dijkstra's first edge in the path using Dijkstra or A*
-            #     if ext is not None:
-            #         print('avoiding dijkstra with '+str(index2alg(j-2))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
-            if ext is None or len(ext)==0: # no alternative route was found using Dijkstra or A* while excluding the first street
+            if ext is None or len(ext)==0: # no route was found using Dijkstra or A*
                 ext = build_path(mapdata,e.getID(),target_edge,index2alg(j)) # use BFS or Greedy BFS
                 if ext is not None and verbose:
                     print('edge '+str(e.getID())+' path based on '+str(index2alg(j))+' with length '+str(calculate_pathlen(ext,[], mapdata))+':'+str(ext))
-
-    # elif needforworks:
-    #     # work areas detected in Dijkstra-based path, wip areas must be dodged
-    #     if j<2:
-    #         ext = build_path(mapdata,e.getID(),target_edge,index2alg(j)) # create path with Dijkstra or A* including wip areas
-    #     else: # for the other 2 behaviours
-    #         fnode = [] # list of nodes to forbid while building paths
-    #         fnode.extend(works) # exclude wip areas first
-    #         alt = False
-    #         index = 0 # run Dijkstra by default
-    #         if j==4:
-    #             if e.getID() in dijkstrabased: # explore and exclude both wip areas and first street of Dijkstra-built path
-    #                 fnode.append(dijkstrabased[e.getID()])
-    #                 alt = True
-    #         if not alt: # not running index 4 path
-    #             index = j-2
-    #         ext = build_path(mapdata,e.getID(),target_edge,index2alg(index),forbidnode=fnode)
-    #     if ext is None:
-    #         ext = build_path(mapdata,e.getID(),target_edge,index2alg(j))
     if ext is None:
         route = None
     else:
-        if 'SUCC' not in ext:
+        if 'SUCC' not in ext: # add 'SUCC' string for emphasizing success of path search
             route.extend(ext)
-    return route # if decomment return 1 tab
+    return route
 
+# method for creating offline paths, inputs are: 
+# - number of algorithms/behaviours for each target, 
+# - data structure containing all static data related to the map, 
+# - flag for taking into account wip areas (optional)
 def create_paths(num_algs,mapdata,consider_works=False):
     if 'SUMO_HOME' in os.environ:
         tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
@@ -245,10 +175,6 @@ def create_paths(num_algs,mapdata,consider_works=False):
         sys.exit("please declare environment variable 'SUMO_HOME'")
     targets = mapdata.targets
     edge_list = mapdata.edgelist
-    net = mapdata.net
-    edge_dict = mapdata.edge_dict
-    
-
     sumocfg_name = 'osm_'+str(mapdata.scenario)+'.sumocfg'
     sumoBinary = sumolib.checkBinary('sumo')
 
@@ -266,20 +192,24 @@ def create_paths(num_algs,mapdata,consider_works=False):
             for e in edge_list:
                 if (e.getID() not in paths):
                     paths[e.getID()] = []
-                route = index2path(j,target_edge,e,mapdata,dijkstrabased=dijkstrabased,works=works)
+                route = index2path(j,target_edge,e,mapdata,works=works) # look for route given index and target
                 if len(paths[e.getID()])<num_algs*len(targets):
-                    if route is None:
+                    if route is None: # no route found
                         paths[e.getID()].append(None)
-                    else:    
+                    else: # route found
                         paths[e.getID()].append(list(route))
                     valid_edges = valid_neighbors(e,mapdata,target_edge)
-                    if len(valid_edges)>1 and j==0:
+                    if len(valid_edges)>1 and j==0: # update data structure related to first edges in Dijkstra paths
                         dijkstrabased[e.getID()] = route[1]
             i+=1
-    print("Behaviors generated!")
+    print("Paths generated!")
     traci.close()
     np.save('paths_'+str(mapdata.scenario)+'_'+str(num_algs)+('_wip' if consider_works else ''), paths)
     
+# method for creating offline behaviours and paths, inputs are: 
+# - number of algorithms/behaviours for each target, 
+# - data structure containing all static data related to the map, 
+# - flag for taking into account wip areas (optional)
 def create_behaviours(num_algs,mapdata,consider_works=False):
 
     if 'SUMO_HOME' in os.environ:
@@ -300,188 +230,113 @@ def create_behaviours(num_algs,mapdata,consider_works=False):
     traci.start(sumoCmd)
     print("Starting SUMO...")
 
-    behaviors = np.zeros((len(targets)*num_algs, len(edge_list), len(edge_list)))
+    behaviors = np.zeros((len(targets)*num_algs, len(edge_list), len(edge_list))) # initialize data structure for keeping all pmfs
     works = mapdata.works if consider_works else {}
     i=0
     paths = {}
     for t in targets:
-        pmfs = np.zeros((len(edge_list), len(edge_list)))
+        # pmfs = np.zeros((len(edge_list), len(edge_list))) # initialize pmfs for the target
         dijkstrabased = {}
         target_edge = targets[t]
         for j in range(num_algs):
-            pmfs = np.zeros((len(edge_list), len(edge_list)))
+            pmfs = np.zeros((len(edge_list), len(edge_list))) # initialize pmfs for the target and the j-th behaviour
             for e in edge_list:
-                if (e.getID() not in paths):
+                if (e.getID() not in paths): # if not in paths data structure, initialize it
                     paths[e.getID()] = []
-                route = index2path(j,target_edge,e,mapdata,dijkstrabased=dijkstrabased,works=works)
+                route = index2path(j,target_edge,e,mapdata,works=works) # look for path
                 if len(paths[e.getID()])<num_algs*len(targets):
-                    if route is None:
+                    if route is None: # no route found
                         paths[e.getID()].append(None)
-                    else:    
+                    else: # route was found
                         paths[e.getID()].append(list(route))
-                pmf = [0]*((len(edge_list)))
+                pmf = [0]*((len(edge_list))) # empty pmf for edge
                 if route is None or len(route) ==0 : # edges are not connected 
-                    for x in range(len(pmf)):
+                    for x in range(len(pmf)): # create empty pmf
                         pmf[x] = 0
-                elif(len(route) == 1):
+                elif(len(route) == 1): # destination reached, put probability 1.0 on the only possible road
                     e_prime = e.getID()
                     pmf[edge_dict[e_prime]] = 1.0
                 else:
                     e_prime = route[1] # e' is the edge just after e 
 
                     prob = 0.99 
-                    pmf[edge_dict[e_prime]] = prob
+                    pmf[edge_dict[e_prime]] = prob # put probability of choosing e' 0.99 as edge in the calculated path
 
-                    valid_edges = valid_neighbors(e,mapdata,target_edge)
-                    # valid_lengths = valid_neighbors_lengths(valid_edges,t)
-                    # totlength = sum(valid_lengths.values())
+                    valid_edges = valid_neighbors(e,mapdata,target_edge) # look for other valid neighbouring edges
                     for v in valid_edges:
                         if(edge_dict[v.getID()]!= edge_dict[e_prime]):
-                            pmf[edge_dict[v.getID()]] = (1-prob) / (len(valid_edges)-1)
-                        # pmf[edge_dict[v.getID()]] = (totlength-valid_lengths[v])/totlength if totlength!=valid_lengths[v] else 1.0
-                        # print(str(v)+" "+str(pmf[edge_dict[v.getID()]]))
-                    if len(valid_edges)>1 and j==0:
+                            pmf[edge_dict[v.getID()]] = (1-prob) / (len(valid_edges)-1) # assign to each of them the remaining probability
+                    if len(valid_edges)>1 and j==0: # update data structure related to first edges in Dijkstra paths
                         dijkstrabased[e.getID()] = e_prime
                     
                 pmf = np.array(pmf)
                         
-                if np.sum(pmf) !=0:
+                if np.sum(pmf) !=0: # normalize probabilities
                     pmf = pmf/np.sum(pmf)
                         
-                pmfs[edge_dict[e.getID()]] = pmf
-                # print([x for x in pmf if x!=0])
+                pmfs[edge_dict[e.getID()]] = pmf # update pmfs data structure
             
+            # after creating pmfs for each of the edges given the target and the index of the behaviours, update general behaviour data structure
             for k in range(len(pmfs)):
                 behaviors[i,k] = behaviors[i,k]+pmfs[k]
-                if np.sum(behaviors[i,k])>1:
-                    print('WARNING HERE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')        
+                if np.sum(behaviors[i,k])>1: # check for debugging purposes
+                    print('WARNING HERE')        
             i+=1
-            #     route = []
-            #     # if j == 0:
-            #     #     route = traci.simulation.findRoute(e.getID(), t).edges
-            #     # else:
-            #     #     route = traci.simulation.findRoute(e.getID(), t, "routerByDistance").edges
-            #     if j == 0:
-            #             route = traci.simulation.findRoute(e.getID(), t).edges
-            #     elif j == 1:
-            #         route = traci.simulation.findRoute(e.getID(), t, "routerByDistance").edges
-            #     else:
-            #         route = []
-            #         route.append(e.getID())
-            #         ext = build_path(graphdict,e.getToNode().getID(),endnode,index2alg(j),graphmap=graphmap,connections=connections,edge=e.getID())
-            #         if ext is None:
-            #             route = None
-            #         else:
-            #             if 'SUCC' not in ext:
-            #                 route.extend(ext)
-            #     pmf = [0]*((len(edge_list)))
-                
-            #     if route is None or len(route) ==0 : # edges are not connected 
-            #         for x in range(len(pmf)):
-            #             pmf[x] = 0
-                
-            #     elif(len(route) == 1):
-            #         e_prime = e.getID()
-            #         pmf[edge_dict[e_prime]] = 1.0
-            #         print(str(route)+' from edge '+str(e.getID()))
-            #         # prob = 0.95 
-                    
-            #         # pmf[edge_dict[e_prime]] = 0.95  
-            #         # valid_edges = valid_neighbors(e,graphdict,connections)
-                        
-            #         # for v in valid_edges:
-            #         #     if(edge_dict[v.getID()]!= edge_dict[e_prime]):
-            #         #         pmf[edge_dict[v.getID()]] = (1-prob) / len(valid_edges)
-            #     else:
-                    
-            #         e_prime = route[1] # e' is the edge just after e 
-
-            #         prob = 0.95
-            #         pmf[edge_dict[e_prime]] = prob
-
-            #         valid_edges = valid_neighbors(e,graphdict,connections,t)
-
-            #         for v in valid_edges:
-            #             if(edge_dict[v.getID()]!= edge_dict[e_prime]):
-            #                 pmf[edge_dict[v.getID()]] = (1-prob) / len(valid_edges)
-
-            #     pmf = np.array(pmf)
-                        
-            #     if np.sum(pmf) !=0:
-            #         pmf = pmf/np.sum(pmf)
-                        
-            #     pmfs[edge_dict[e.getID()]] = pmf
-                    
-            # behaviors[i] = pmfs
-
-
-            # i+=1
-    print("Behaviors generated!")
+    print("Behaviors and paths generated!")
     traci.close()
     np.save('behaviors_'+str(mapdata.scenario)+'_'+str(num_algs)+('_wip' if consider_works else ''), behaviors)
     np.save('paths_'+str(mapdata.scenario)+'_'+str(num_algs)+('_wip' if consider_works else ''), paths)
-    
-def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,behavior_created,works,toupdate=False,colorpaths=False,colorprobs=False):
+
+# method for creating online behaviours and paths, inputs are: 
+# - data structure containing all static data related to the map, 
+# - number of algorithms/behaviours for each target, 
+# - target edge of the vehicle calling this method, 
+# - the list of edges for which to calculate paths and behaviours, 
+# - data structure containing already built pmfs, 
+# - data structure for checking if a behaviour is already created, 
+# - list of wip areas, 
+# - flag to check if behaviours must be updated or not (optional),
+# - flag for coloring streets according to their pmf (optional)
+def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,behavior_created,works,toupdate=False,colorprobs=False):
     targets = mapdata.targets
-    net = mapdata.net
     edge_list = mapdata.edgelist
-    graphdict = mapdata.graphdict
-    graphmap = mapdata.graphmap
-    connections = mapdata.connections
     edge_dict = mapdata.edge_dict
-    # behaviors = np.zeros((len(targets)*num_algs, len(edge_list), len(edge_list)))
     colorvalue = getIfromRGB(list(car_color(list(targets.keys())[list(targets.values()).index(target_edge)]))[0:3])
                             
-    # i=0
     i = list(targets.values()).index(target_edge)*num_algs
-    # for t in targets.values():
-        # pmfs = np.zeros((len(edge_list), len(edge_list)))
-        # pmfs = behaviors[i]
-    endnode = net.getEdge(target_edge).getToNode().getID()
     if colorprobs:
         for edg in edge_list:
             traci.edge.setParameter(edg.getID(),'color',0)
     dijkstrabased = {}
     paths = {}
     for j in range(num_algs):
-        pmfs = np.zeros((len(edge_list), len(edge_list)))
+        pmfs = np.zeros((len(edge_list), len(edge_list))) # initialize pmfs for the j-th behaviour
         for e in ss_edges:
-            if (e.getID(),target_edge) not in behavior_created or toupdate:
-                if (e.getID() not in paths) or (j==0):
+            if (e.getID(),target_edge) not in behavior_created or toupdate: # if the behaviour is not already built or it needs to be updated
+                if (e.getID() not in paths) or (j==0): # if not in paths data structure, initialize it
                     paths[e.getID()] = []
-                route = index2path(j,target_edge,e,mapdata,dijkstrabased=dijkstrabased,works=works)
+                route = index2path(j,target_edge,e,mapdata,works=works) # look for path
                 if len(paths[e.getID()])<num_algs:
                     paths[e.getID()].append(list(route))
-                pmf = [0]*((len(edge_list)))
+                pmf = [0]*((len(edge_list))) # empty pmf for edge
                 if route is None or len(route) ==0 : # edges are not connected 
-                    for x in range(len(pmf)):
+                    for x in range(len(pmf)): # create empty pmf
                         pmf[x] = 0
-                elif(len(route) == 1):
+                elif(len(route) == 1): # destination reached, put probability 1.0 on the only possible road
                     e_prime = e.getID()
                     pmf[edge_dict[e_prime]] = 1.0
                 else:
                     e_prime = route[1] # e' is the edge just after e 
 
                     prob = 0.99 
-                    pmf[edge_dict[e_prime]] = prob
+                    pmf[edge_dict[e_prime]] = prob # put probability of choosing e' 0.99 as edge in the calculated path
 
-                    valid_edges = valid_neighbors(e,mapdata,target_edge)
-                    # valid_lengths = valid_neighbors_lengths(valid_edges,t)
-                    # totlength = sum(valid_lengths.values())
+                    valid_edges = valid_neighbors(e,mapdata,target_edge) # look for other valid neighbouring edges
                     for v in valid_edges:
                         if(edge_dict[v.getID()]!= edge_dict[e_prime]):
-                            pmf[edge_dict[v.getID()]] = (1-prob) / (len(valid_edges)-1)
-                        # pmf[edge_dict[v.getID()]] = (totlength-valid_lengths[v])/totlength if totlength!=valid_lengths[v] else 1.0
-                        # print(str(v)+" "+str(pmf[edge_dict[v.getID()]]))
+                            pmf[edge_dict[v.getID()]] = (1-prob) / (len(valid_edges)-1) # assign to each of them the remaining probability
                     if len(valid_edges)>1 and j==0:
-                        dijkstrabased[e.getID()] = e_prime
-                    if colorpaths:
-                        if j == 2:
-                            for edg in edge_list:
-                                traci.edge.setParameter(edg.getID(),'color',0)
-                            
-                            for re in route:
-                                traci.edge.setParameter(re,'color',colorvalue-j*100000)
+                        dijkstrabased[e.getID()] = e_prime # update data structure related to first edges in Dijkstra paths
                     if colorprobs:
                         if j == 2:
                             for r in valid_edges:
@@ -490,17 +345,17 @@ def online_create_behaviours(mapdata,num_algs,target_edge,ss_edges,behaviors,beh
                     
                 pmf = np.array(pmf)
                         
-                if np.sum(pmf) !=0:
+                if np.sum(pmf) !=0: # normalize probabilities
                     pmf = pmf/np.sum(pmf)
                         
-                pmfs[edge_dict[e.getID()]] = pmf
-                # print([x for x in pmf if x!=0])
+                pmfs[edge_dict[e.getID()]] = pmf # update pmfs data structure
+        # after creating pmfs for each of the edges, update general behaviour data structure
         for k in range(len(pmfs)):
-            if toupdate and edge_list[k] in ss_edges:
+            if toupdate and edge_list[k] in ss_edges: # clear previously built behaviour if update is needed
                 behaviors[i,k] = np.zeros(len(edge_list))
             behaviors[i,k] = behaviors[i,k]+pmfs[k]
             su = np.sum(behaviors[i,k])
             if su>1:
-                print('WARNING HERE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA '+str(su))        
+                print('WARNING HERE') # check for debugging purposes   
         i+=1
     return behaviors,paths

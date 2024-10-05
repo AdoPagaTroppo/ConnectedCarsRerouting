@@ -1,7 +1,10 @@
+# Module for all color-related methods
+
 import numpy as np
 import traci
-import math
 
+# method for defining car colors according to their destination, inputs are:
+# - string defining the car destination
 def car_color(type):
     if type=='NAPOLI':
         return 255,0,255,1 # fucsia
@@ -17,6 +20,8 @@ def car_color(type):
         return 0,0,255,1 # blue
     return 255,255,255,1
 
+# method for defining street colors according to their algorithm, inputs are: 
+# - string defining the algorithm
 def alg_color(type):
     if type=='e_bfs':
         return 255,0,255,1 # fucsia
@@ -28,6 +33,8 @@ def alg_color(type):
         return 255,255,0,1 # yellow
     return 255,255,255,1
 
+# method for turning RBG array of colors into integer value, inputs are:
+# - an array containing the RBG values of the color to be turned into integer
 def getIfromRGB(rgb):
     red = rgb[0]
     green = rgb[1]
@@ -35,9 +42,12 @@ def getIfromRGB(rgb):
     RGBint = (red<<16) + (green<<8) + blue
     return RGBint
 
-def colorMap(r,mapdata,rewards4colors,end_edge):
+# method for coloring edges in the scenario according to their reward (MUST BE ADAPTED TO EACH COST FUNCTION), inputs are:
+# - reward array,
+# - data structure containing all static data related to the map,
+# - data structure keeping track of previously colored streets
+def colorMap(r,mapdata,rewards4colors):
     edgelist = mapdata.edgelist
-    targets = mapdata.targets
     maxrew = np.max(r)
     maxre4=0
     minrew = np.min(r)
@@ -49,18 +59,12 @@ def colorMap(r,mapdata,rewards4colors,end_edge):
         minre4 = np.min(vals)
     maxr = 0
     minr = 0
-    # if sumvals!=0:
-    #     maxr = maxrew if maxrew>maxre4 else maxre4
-    #     minr = minrew if minrew<minre4 else minre4
-    # else:
     maxr = maxrew
     minr = minrew
-    # move by 1 tab if decommenting before
     if sumvals == 0:
         maxr = 1000
     print('maxr '+str(maxr)+' minr '+str(minr)+' maxre4 '+str(maxre4)+' minre4 '+str(minre4)+' maxrew '+str(maxrew)+' minrew '+str(minrew))
     for edgeindex in range(len(edgelist)):
-        colors = list(car_color(list(targets.keys())[list(targets.values()).index(end_edge)]))[0:3]
         ed = edgelist[edgeindex].getID()
         rvalue = minr
         colorvalue = 0
@@ -68,13 +72,4 @@ def colorMap(r,mapdata,rewards4colors,end_edge):
             rewards4colors[ed] = r[edgeindex]
             rvalue = rewards4colors[ed]
             colorvalue = int(abs(rvalue-minr)/abs(maxr-minr)*1000)+10
-        # else:
-            # if ed in rewards4colors:
-            #     if sumvals!=0 and maxre4!=minre4:
-            #         diffvalue = abs(rewards4colors[ed]-minre4)/abs(maxre4-minre4)*abs(maxr-minr)
-            #         rewards4colors[ed] = diffvalue+minr
-            #         colorvalue = int(diffvalue/abs(maxr-minr)*1000)+10
-        # for c in range(len(colors)):
-        #     colors[c] = int(colors[c]*abs(rvalue-minr)/abs(maxr-minr))
-        # colorvalue = getIfromRGB(colors)
         traci.edge.setParameter(ed,'color',colorvalue)

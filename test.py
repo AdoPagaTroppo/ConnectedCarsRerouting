@@ -1,3 +1,5 @@
+# Script for quickly checking random things
+
 from graph_util import build_graph
 from algorithms import build_path
 from behaviours_maker import index2alg
