@@ -100,6 +100,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
         numberofruns = int(len(filelist)/numberofsim/numberofparams)
         print(example_name)
         print(str(numberofruns)+' '+str(numberofsim)+' '+str(numberofparams))
+        filelist = [x for x in filelist if int(x.split('_')[0].replace('run',''))<numberofruns]
         NUMBER_OF_CARS = int(example_name[2].replace('cars',''))
         TIME_HORIZON = int(example_name[3].replace('hor',''))
         # prepare x axis
