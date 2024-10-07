@@ -136,7 +136,7 @@ class MapData():
         self.roundabouts = None
         create_roundabouts = False
         if os.path.exists(str(scenario)+'ScenarioData/roundabouts.txt'):
-            self.roundabouts = self.read_roundabouts(scenario)
+            self.roundabouts = self.read_roundabouts()
         elif create_roundabouts:
             self.roundabouts = self.find_roundabouts()
         if self.roundabouts is not None: # additionally keep track of streets inside roundabouts to improve efficiency for checks
