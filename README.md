@@ -15,6 +15,8 @@ After cloning the project, download the follow Python libraries using pip
   numpy
   matplotlib
   pygame
+  pyserial
+  pnmeagps
   gtts
   tk
 ```
