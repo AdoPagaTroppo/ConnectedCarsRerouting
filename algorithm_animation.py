@@ -25,6 +25,8 @@ start = mapdata.net.getEdge(start)
 traci.start(['sumo-gui','-c','osm_'+str(SCENARIO)+'.sumocfg','--step-length',str(1.0)])
 paths = [None]*4
 for i in range(4):
+    # for k in mapdata.edgelist:
+    #     traci.edge.setParameter(k.getID(),'color',0)
     paths[i] = index2path(i,end,start,mapdata,works=works)
     if i == 0:
         dijkstrabased[start.getID()] = paths[i][1] # update data structure to keep track of first edges chosen by Dijkstra algorithm for paths

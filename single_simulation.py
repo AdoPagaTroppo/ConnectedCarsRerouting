@@ -143,7 +143,6 @@ def compute_reward(ss,passed,mapdata,target_edge,works,vehicle,paths,agents):
         # r[i] = -pathlen+density+repeat_in_path+road_repeat+waitingtime # product between speed and density to define dependency between density and car speeds
         # r[i] = 5*roadspeed*density+road_repeat+road_in_wip # product between speed and density to define dependency between density and car speeds
         # print('reward edge '+str(edid)+': '+str(-pathlen)+' + '+str(roadspeed)+' + '+str(roadspeed*density)+str(repeat_in_path)+' + '+str(road_repeat)+str(10*waitingtime)+' = '+str(r[i]))
-        print('reward edge '+str(edid)+': '+str(roadspeed)+' + '+str(roadspeed*density)+' + '+str(lastspeed)+' + '+str(prio)+' + '+str(road_repeat)+' = '+str(r[i]))
         # print('reward edge '+str(edid)+': '+str(pathlen)+' + '+str(roadspeed)+' + '+str(5*roadspeed*density)+str(repeat_in_path)+' + '+str(road_repeat)+' = '+str(r[i]))
         # r[i] = -pathlen-(1000000 if edid in works else 0)-(70/totrepeat+100*(passed[edid]-1) if edid in passed else 0)
         # print('edge '+str(edid)+' reward '+str(r[i]))

@@ -69,9 +69,10 @@ def spawnUncontrolledCars(num_uncontrolled,mapdata):
     j = 0
     for c in range(int(num_uncontrolled)):
         # source = random.choices(sources)[0] # choose a random source
-        source = '766350967' # starting edge in Salerno city centre map
-        # dest = random.choices(destinations,target_weights)[0] # destination selected according to realistic traffic flows
-        dest = destinations[i%(len(destinations)-3)][0] # destination selected in order
+        # source = '766350967' # starting edge in Salerno city centre map
+        source = '330223560#1'
+        dest = random.choices(destinations,target_weights)[0] # destination selected according to realistic traffic flows
+        # dest = destinations[i%(len(destinations)-3)][0] # destination selected in order
         # dest = destinations[0] # selectable destination index
         id = 'veh'+str(c+1)+'_'+str(dest[1])
         routeid = 'route'+str(c+1)
@@ -102,8 +103,8 @@ def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,online,agent_start=None
     agents = {}
     for i in range(int(NUM_AGENTS)):
         # destt = random.choices(destinations,target_weights)[0] # destination selected according to realistic traffic flows
-        destt = destinations[i%(len(destinations)-3)] # destination selected in order
-        # destt = destinations[5] # selectable destination index
+        # destt = destinations[i%(len(destinations)-3)] # destination selected in order
+        destt = destinations[5] # selectable destination index
         dest = destt[0]
         agentid = 'agent'+str(i)+'_'+str(destt[1])
         agrouteid = agentid+'_route'

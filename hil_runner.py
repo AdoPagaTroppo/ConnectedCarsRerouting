@@ -48,7 +48,7 @@ def reading_thread(ser):
             (raw_data, msg2) = nmr.read() # msg will be global variable that main will read
             msgstr = str(msg2)
             if msgstr.__contains__('lat=') and msgstr.__contains__('lon=') and (not msgstr.__contains__('lat=,') and not msgstr.__contains__('lon=,')): # if latitude and longitude are included in the message
-                f = open('log_gps_vil.txt','a')
+                f = open('log_gps_video.txt','a')
                 msg = msg2 # update msg variable
                 if verbose:
                     print(f"lat: {msg.lat} - lon: {msg.lon}")
@@ -66,7 +66,7 @@ def reading_thread_file(mapdata):
     msg = None
     stop = False
     coords = []
-    f = open('log_gps_vil.txt','r')
+    f = open('log_gps_test.txt','r')
     dats = f.readlines()
     for dat in dats:
         cs = dat.split(':')
@@ -78,7 +78,7 @@ def reading_thread_file(mapdata):
         print(coords[i])
         while not proceed: # coordinating with simulation steps
             pass
-        sleep(0.1)
+        sleep(0.25)
     stop = True
     exit()
 
@@ -116,13 +116,15 @@ def find_closest_edge(mapdata,path=None,start_edge=None):
                         p2 = traci.simulation.findRoute(start_edge,dae[1].getID()).edges
                         if len(p2)>0 and len(p2)<4: # if the edge is not too far from the specific edge, include it
                             distancesAndEdges.append(dae)
+                            print(p2)
                     else: # include in the path
                         distancesAndEdges.append(dae)
                 else: # the edge is not in the path
                     if start_edge is not None: # if the vehicle needs to move from a specific edge
                         p2 = traci.simulation.findRoute(start_edge,dae[1].getID()).edges
-                        if len(p2)>0 and len(p2)<4: # if the edge is not too far from the specific edge, include it even if it does not belong to the path
-                            distancesAndEdges.append(dae)
+                        # if len(p2)>0 and len(p2)<4: # if the edge is not too far from the specific edge, include it even if it does not belong to the path
+                        #     distancesAndEdges.append(dae)
+                        #     print(p2)
     if verbose:
         print(distancesAndEdges)
     if len(distancesAndEdges)==0: # no suitable edge found
@@ -167,12 +169,12 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     PLAY_AUDIO = check_audio_from_params()
     verbose = False # many prints ahead, change to True for debugging purposes
     # open('log_gps_vil.txt','w').close() # decomment if using real GPS
-    # ser = serial.Serial('/dev/rfcomm0', 9600) # decomment if using real GPS
+    ser = serial.Serial('/dev/rfcomm0', 9600) # decomment if using real GPS
     global proceed
     proceed = False
     # create a thread
-    # thread = Thread(target=reading_thread, args=[ser]) # decomment if using real GPS
-    thread = Thread(target=reading_thread_file, args=[mapdata]) # decomment if using pre-recorded GPS locations
+    thread = Thread(target=reading_thread, args=[ser]) # decomment if using real GPS
+    # thread = Thread(target=reading_thread_file, args=[mapdata]) # decomment if using pre-recorded GPS locations
     # run the thread
     thread.daemon = True
     thread.start()
@@ -355,13 +357,17 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         traci.vehicle.setSpeed(vehicle,net.getEdge(roadid).getSpeed()/20) # slowing cars down in wip areas
                     elif roadid not in works and vehicle!=agent_car:
                         traci.vehicle.setSpeed(vehicle,-1)
+                    if vehicle == agent_car and not thread.is_alive:
+                        print('thread is not alive')
+                        traci.vehicle.setSpeed(agent_car,-1)
                     if roadid in checkpoints: # checkpoints data update (THIS WILL PROBABLY BE DELETED AS IT HAS NO USE)
                         if secondcounter%secondtot==0:
                             checkpoints[roadid]['speed'].append(vehicle_speed)
                             checkpoints[roadid]['flow'] += 1
                     # if vehicle is an agent and it enters a new edge/crossing, launch the decision making step
                     if vehicle.__contains__('agent') and (vehicle not in prev_edge or vehicle in prev_edge and prev_edge[vehicle]!=roadid) and (vehicle in next_edge and next_edge[vehicle]!=end_edge[vehicle] or vehicle not in next_edge) and len(roadid)>2:
-                        currentid = roadid if not roadid.__contains__(':') else next_edge[vehicle] # identify id of edge on which make the evaluations
+                        # currentid = roadid if not roadid.__contains__(':') else next_edge[vehicle] # identify id of edge on which make the evaluations
+                        currentid = current_edge # identify id of edge on which make the evaluations
                         if verbose:
                             print('currentid '+str(currentid))
                         statecars = edgelist.index(net.getEdge(currentid)) # find car state (index of currentid edge)
@@ -447,7 +453,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                             rt2 = []
                             if verbose:
                                 print('changing path')
-                            rt2.extend(rt)
+                            rt2.extend(rt[0:4])
                             try:
                                 traci.vehicle.setRoute(agent_car,rt2)
                             except TraCIException:
@@ -479,13 +485,13 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                 scounter += 1
                 if scounter%60 == 0:
                     mcounter += 1
-                    if INCLUDE_RANDOM and tottoarrive+1<NUM_VEHICLES: # if possible, spawn random vehicle
+                    if INCLUDE_RANDOM: # if possible, spawn random vehicle
                         spawned, spawnedRand = spawnRandom(graphdict)
                         if spawned:
                             if verbose:
                                 print("Spawned random vehicle")
                             vehs[spawnedRand] = VehicleData(spawnedRand,spawnedRand.replace('_vehicle',''),scounter*(mcounter+1),'')
-                    if INCLUDE_BUS and tottoarrive+1<NUM_VEHICLES: # if possible, spawn bus
+                    if INCLUDE_BUS: # if possible, spawn bus
                         spawned, spawnedBuss = spawnBus(busdata,mcounter)
                         if spawned:
                             if verbose:
@@ -576,7 +582,7 @@ def move_car_on_road(mapdata,roadid,agent_car,cl_prev_edge,current_edge,path,x,y
         out_of_course_counter = 0
     else: # car spawned before
         if x == old_x and y == old_y: # no movement detected
-            traci.vehicle.setSpeed(agent_car,0)
+            # traci.vehicle.setSpeed(agent_car,0)
             if r_prev_edge:
                 if current_edge!=a_prev_edge and not crossing: # different edge detected, wrong detection
                     out_of_course_counter = 1

@@ -28,6 +28,12 @@ def approx10(value):
     v = int(value/10)
     return v*10
 
+# method for approximating a value to its closest multiple of 1000, inputs are:
+# - the value to approximate    
+def approx1000(value):
+    v = int(value/1000)
+    return v*1000
+
 # method for playing direction audio, inputs are:
 # - data structure containing all static data related to the map,
 # - edge from which the audio is being asked to play,
@@ -43,8 +49,12 @@ def playAudio(mapdata,current,prox,lan,dist=None,prox_edge=None,roundabout=False
     roadname = net.getEdge(prox.getID()).getName()
     c_roadname = net.getEdge(current).getName()
     roadlen = approx10(int(net.getEdge(current).getLength())) if dist is None else approx10(dist) # approximate distance
+    km = False
+    if roadlen>=1000: # if dealing with kilometers, make a sentence with kilometers instead of meters
+        roadlen = int(approx1000(int(roadlen))/1000)
+        km = True
     keepGoing = roadname==c_roadname # check if vehicle needs to keep going on their street
-    lentext = ("In "+str(roadlen)+" meters, " if lan=='en' else "Tra "+str(roadlen)+" metri, ") if roadlen>=20 else "" # only declare the distance if it is bigger than 20 meters
+    lentext = ("In "+str(roadlen)+(' kilo' if km else ' ')+"meter"+("s" if not km or roadlen>1 else "")+", " if lan=='en' else "Tra "+str(roadlen)+(' chilo' if km else ' ')+"metr"+("i" if not km or roadlen>1 else "o")+", ") if (roadlen>=20 and not km) or km else "" # only declare the distance if it is bigger than 20 meters
     aud_text = lentext
     play = True
     if not roundabout: # edge of the crossing of interest is not in a roundabout
