@@ -1,6 +1,22 @@
 # Module for obtaining data about buses from Busitalia official CSV files for lines in the province of Salerno
 
+import requests
 import os
+import csv
+import xlrd # version 1.2.0 is required
+
+# if bus scheduling sheet is not already available, download it from the web
+if not os.path.exists('oraripullman.csv'):
+    dls = "https://www.fsbusitalia.it/content/dam/fsbusitalia/documenti/campania/bic-2024-pdf/Libretto%20Orario%20Annuale%20online%20rev%20%2001.10.24.xlsx"
+    resp = requests.get(dls)
+    with open('oraripullman.xls', 'wb') as output:
+        output.write(resp.content)
+    
+    # turn excel file into csv
+    sheet = xlrd.open_workbook("oraripullman.xls").sheet_by_index(0) 
+    col = csv.writer(open("oraripullman.csv", 'w', newline="")) 
+    for row in range(sheet.nrows): 
+        col.writerow(sheet.row_values(row)) 
 
 # method for obtaining data of buses crossing the areas of interest, with starting edges, ending edges and depart times, inputs are:
 # - the hour from which to start considering the lines,
@@ -10,7 +26,7 @@ def bus_parser(starttime,scenario):
     code = '15' if scenario=='Unisa' else '02' # codes for "Feriali" lines
     data = []
     buslines = {}
-    with open('oraripullman.csv','r',errors='ignore') as f:
+    with open('oraripullman2.csv','r',errors='ignore') as f:
         data = f.readlines()
     currentline = ''
     valindexes = []

@@ -19,6 +19,7 @@ After cloning the project, download the follow Python libraries using pip
   pnmeagps
   gtts
   tk
+  xlrd == 1.2.0
 ```
 
 According to the desired use of the software, different scripts must be run or different lines of code must be decommented.
