@@ -65,10 +65,6 @@ def versus_plotter(x,avg_array1,std_array1,avg_array2,std_array2,title,save_fig,
     if showplots:
         plt.show()
 
-# UNUSED METHOD, WILL PROBABLY BE REMOVED
-def remove_errors(payload):
-    return [x for x in payload if x>=0]
-
 # method for plotting the different metrics on a global scale and in comparison between controlled and uncontrolled vehicles, inputs are:
 # - a flag for selecting between plotting data related to all simulations or data related to one run (optional)
 def elaborate_and_make_plots(TIMEDATA=False):
@@ -183,11 +179,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
                         if len(payload)<1:
                             payload = 0
                         else:
-                            payload = remove_errors(payload)
-                            if len(payload)<1:
-                                payload = 0
-                            else:
-                                payload = np.mean(payload)
+                            payload = np.mean(payload)
                         if f_name[6].endswith('co2'):
                             sim_co2_agent.append(payload)
                         elif f_name[6].endswith('fuelconsumption'):
@@ -207,11 +199,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
                         if len(payload)<1:
                             payload = 0
                         else:
-                            payload = remove_errors(payload)
-                            if len(payload)<1:
-                                payload = 0
-                            else:
-                                payload = np.mean(payload)
+                            payload = np.mean(payload)
                         if f_name[6].endswith('co2'):
                             sim_co2_foe.append(payload)
                         elif f_name[6].endswith('fuelconsumption'):
@@ -231,11 +219,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
                         if len(payload)<1:
                             payload = 0
                         else:
-                            payload = remove_errors(payload)
-                            if len(payload)<1:
-                                payload = 0
-                            else:
-                                payload = np.mean(payload)
+                            payload = np.mean(payload)
                         print(payload)
                         if f_name[6].endswith('co2'):
                             sim_co2.append(payload)
