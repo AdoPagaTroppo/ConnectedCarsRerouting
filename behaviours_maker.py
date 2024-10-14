@@ -7,12 +7,15 @@ import sys
 import sumolib
 from algorithms import build_path
 from colors import *
+import math
 
 # method for calculating length of a path in terms of travel time, inputs are: 
 # - path whose length must be evaluated, 
 # - list of work-in-progress areas, 
 # - data structure containing all static data related to the map
 def calculate_pathlen(path,works,mapdata):
+    if path is None:
+        return math.inf
     worksweight = 20
     net = mapdata.net
     pathlen = 0
@@ -113,7 +116,7 @@ def index2alg(index):
 # - data structure containing all static data related to the map, 
 # - list of work-in-progress areas (optional)
 def index2path(j,target_edge,e,mapdata,works=None):
-    verbose = False # set to True for debugging
+    verbose = True # set to True for debugging
     route = []
     ext = None
     needforworks = False
@@ -126,6 +129,15 @@ def index2path(j,target_edge,e,mapdata,works=None):
                 if ed in testext:
                     needforworks = True
                     break
+            if needforworks:
+                dpathlen = calculate_pathlen(testext,works,mapdata)
+                avoiding_path = build_path(mapdata,e.getID(),target_edge,'e_dijkstra',forbidnode=works)
+                dwpathlen = calculate_pathlen(avoiding_path,works,mapdata)
+                if verbose:
+                    print('dijkstra path length '+str(dpathlen))
+                    print('dijkstra path avoiding works length '+str(dwpathlen))
+                if dpathlen<dwpathlen:
+                    needforworks = False
     if needforworks:
         # work areas detected in Dijkstra-based path, wip areas must be dodged
         if j<2:

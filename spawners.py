@@ -70,9 +70,10 @@ def spawnUncontrolledCars(num_uncontrolled,mapdata):
     for c in range(int(num_uncontrolled)):
         # source = random.choices(sources)[0] # choose a random source
         # source = '766350967' # starting edge in Salerno city centre map
-        source = '330223560#1'
-        dest = random.choices(destinations,target_weights)[0] # destination selected according to realistic traffic flows
-        # dest = destinations[i%(len(destinations)-3)][0] # destination selected in order
+        # source = '330223560#1'
+        source = sources[c%20]
+        # dest = random.choices(destinations,target_weights)[0] # destination selected according to realistic traffic flows
+        dest = destinations[c%(len(destinations))] # destination selected in order
         # dest = destinations[0] # selectable destination index
         id = 'veh'+str(c+1)+'_'+str(dest[1])
         routeid = 'route'+str(c+1)
@@ -81,6 +82,7 @@ def spawnUncontrolledCars(num_uncontrolled,mapdata):
         traci.route.add(routeid,route)
         traci.vehicle.add(id,routeid,'Car_AGENT',str(i)) # new uncontrolled car will spawn every 5 seconds
         traci.vehicle.setSpeed(id,-1)
+        print(str(id)+' loaded with start '+str(source))
         i += 5
         j += 1
     return vehs
@@ -99,12 +101,14 @@ def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,online,agent_start=None
     target_weights = mapdata.target_weights
     scenario = mapdata.scenario
     start_edge = ('-579690548#1' if scenario=='Unisa' else '766350967') if agent_start is None else agent_start
+    begin_spawn = len(vehs)
     end_edge = {}
     agents = {}
     for i in range(int(NUM_AGENTS)):
+        start_edge = sources[(begin_spawn+i)%20]
         # destt = random.choices(destinations,target_weights)[0] # destination selected according to realistic traffic flows
-        # destt = destinations[i%(len(destinations)-3)] # destination selected in order
-        destt = destinations[5] # selectable destination index
+        destt = destinations[i%(len(destinations))] # destination selected in order
+        # destt = destinations[0] # selectable destination index
         dest = destt[0]
         agentid = 'agent'+str(i)+'_'+str(destt[1])
         agrouteid = agentid+'_route'
@@ -116,5 +120,5 @@ def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,online,agent_start=None
         traci.route.add(agrouteid,(start_edge,start_edge))
         traci.vehicle.add(agentid,agrouteid,'Car_'+str(destt[1]),str(i*10)) # a new agent is spawned every 10 seconds
         traci.vehicle.setSpeed(agentid,-1)
-        print(agentid+" loaded")
+        print(agentid+" loaded with start "+str(start_edge))
     return agents,end_edge

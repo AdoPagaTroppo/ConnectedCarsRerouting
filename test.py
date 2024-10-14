@@ -1,6 +1,5 @@
 # Script for quickly checking random things
 
-from graph_util import build_graph
 from algorithms import build_path
 from behaviours_maker import index2alg
 import traci
@@ -99,40 +98,47 @@ from mapdata import Roundabout
 # print(coords)
 
 # m = MapData('Unisa')
-f = open('roundabouts_Unisa.txt','r')
-content = f.readlines()
-roundabouts = {}
-index = 0
-for r in content:
-    rid = 'r'+str(index)
-    roundabouts[rid] = {}
-    roundabouts[rid]['roads'] = []
-    roundabouts[rid]['exits'] = []
-    split_content = r.split(';')
-    r_len = int(split_content[0])
-    for i in range(r_len):
-        roundabouts[rid]['roads'].append(split_content[1+i].replace('\n',''))
-    e_len = int(split_content[1+r_len])
-    for i in range(e_len):
-        roundabouts[rid]['exits'].append(split_content[2+r_len+i].replace('\n',''))
-    print(roundabouts[rid])
-    index += 1
-f.close()
+# f = open('roundabouts_Unisa.txt','r')
+# content = f.readlines()
+# roundabouts = {}
+# index = 0
+# for r in content:
+#     rid = 'r'+str(index)
+#     roundabouts[rid] = {}
+#     roundabouts[rid]['roads'] = []
+#     roundabouts[rid]['exits'] = []
+#     split_content = r.split(';')
+#     r_len = int(split_content[0])
+#     for i in range(r_len):
+#         roundabouts[rid]['roads'].append(split_content[1+i].replace('\n',''))
+#     e_len = int(split_content[1+r_len])
+#     for i in range(e_len):
+#         roundabouts[rid]['exits'].append(split_content[2+r_len+i].replace('\n',''))
+#     print(roundabouts[rid])
+#     index += 1
+# f.close()
 
+mapdata = MapData('Unisa')
 traci.start(['sumo-gui','-c','osm_'+str('Unisa')+'.sumocfg','--step-length',str(0.05)])
+for s in mapdata.sources:
+    traci.edge.setParameter(s,'color',65280)
+for s in mapdata.works:
+    traci.edge.setParameter(s,'color',12)
+for s in mapdata.targets:
+    traci.edge.setParameter(mapdata.targets[s],'color',65535)
 
-roundabouts2 = roundabouts
-# for r in roundabouts:
-#     path = traci.simulation.findRoute(roundabouts[r]['roads'][0],roundabouts[r]['roads'][-1]).edges
-#     if len(path)>0:
-#         roundabouts2[r] = roundabouts[r]
+# roundabouts2 = roundabouts
+# # for r in roundabouts:
+# #     path = traci.simulation.findRoute(roundabouts[r]['roads'][0],roundabouts[r]['roads'][-1]).edges
+# #     if len(path)>0:
+# #         roundabouts2[r] = roundabouts[r]
 
 
-for r in roundabouts2:
-    for roads in range(len(roundabouts2[r]['roads'])):
-        traci.edge.setParameter(roundabouts2[r]['roads'][roads],'color',12)
-    for roads in range(len(roundabouts2[r]['exits'])):
-        traci.edge.setParameter(roundabouts2[r]['exits'][roads],'color',12000)
-    traci.simulationStep()
+# for r in roundabouts2:
+#     for roads in range(len(roundabouts2[r]['roads'])):
+#         traci.edge.setParameter(roundabouts2[r]['roads'][roads],'color',12)
+#     for roads in range(len(roundabouts2[r]['exits'])):
+#         traci.edge.setParameter(roundabouts2[r]['exits'][roads],'color',12000)
+#     traci.simulationStep()
 traci.close()
     

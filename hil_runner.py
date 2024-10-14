@@ -66,7 +66,7 @@ def reading_thread_file(mapdata):
     msg = None
     stop = False
     coords = []
-    f = open('log_gps_test.txt','r')
+    f = open('log_gps_test_old.txt','r')
     dats = f.readlines()
     for dat in dats:
         cs = dat.split(':')
@@ -78,7 +78,7 @@ def reading_thread_file(mapdata):
         print(coords[i])
         while not proceed: # coordinating with simulation steps
             pass
-        sleep(0.25)
+        sleep(0.13)
     stop = True
     exit()
 
@@ -169,12 +169,12 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     PLAY_AUDIO = check_audio_from_params()
     verbose = False # many prints ahead, change to True for debugging purposes
     # open('log_gps_vil.txt','w').close() # decomment if using real GPS
-    ser = serial.Serial('/dev/rfcomm0', 9600) # decomment if using real GPS
+    # ser = serial.Serial('/dev/rfcomm0', 9600) # decomment if using real GPS
     global proceed
     proceed = False
     # create a thread
-    thread = Thread(target=reading_thread, args=[ser]) # decomment if using real GPS
-    # thread = Thread(target=reading_thread_file, args=[mapdata]) # decomment if using pre-recorded GPS locations
+    # thread = Thread(target=reading_thread, args=[ser]) # decomment if using real GPS
+    thread = Thread(target=reading_thread_file, args=[mapdata]) # decomment if using pre-recorded GPS locations
     # run the thread
     thread.daemon = True
     thread.start()
@@ -243,9 +243,17 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
         agent_co2s = []
         agent_fuels = []
         agent_noises = []
+        agent_cos = []
+        agent_pmxs = []
+        agent_noxs = []
+        agent_hcs = []
         foes_co2s = []
         foes_fuels = []
         foes_noises = []
+        foes_cos = []
+        foes_pmxs = []
+        foes_noxs = []
+        foes_hcs = []
         # additional variables for audio and car placing in the map
         current_edge = None
         played_audio_edge = None
@@ -261,9 +269,17 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
             temp_agent_co2s = []
             temp_agent_fuels = []
             temp_agent_noises = []
+            temp_agent_cos = []
+            temp_agent_pmxs = []
+            temp_agent_noxs = []
+            temp_agent_hcs = []
             temp_foes_co2s = []
             temp_foes_fuels = []
             temp_foes_noises = []
+            temp_foes_cos = []
+            temp_foes_pmxs = []
+            temp_foes_noxs = []
+            temp_foes_hcs = []
             prev_signalled_works = len(signalled_works)
             for vehicle in vehs:
                 # look for vehicles in the simulation
@@ -305,15 +321,27 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     vehicle_fuel = traci.vehicle.getFuelConsumption(vehicle)*STEP_SIZE
                     vehicle_noise = traci.vehicle.getNoiseEmission(vehicle)
                     vehicle_co2 = traci.vehicle.getCO2Emission(vehicle)*STEP_SIZE
+                    vehicle_co = traci.vehicle.getCOEmission(vehicle)*STEP_SIZE
+                    vehicle_pmx = traci.vehicle.getPMxEmission(vehicle)*STEP_SIZE
+                    vehicle_nox = traci.vehicle.getNOxEmission(vehicle)*STEP_SIZE
+                    vehicle_hc = traci.vehicle.getHCEmission(vehicle)*STEP_SIZE
                     vehicle_waiting = traci.vehicle.getWaitingTime(vehicle)
                     if vehicle.__contains__('agent'):
                         temp_agent_co2s.append(vehicle_co2)
                         temp_agent_noises.append(vehicle_noise)
                         temp_agent_fuels.append(vehicle_fuel)
+                        temp_agent_cos.append(vehicle_co)
+                        temp_agent_pmxs.append(vehicle_pmx)
+                        temp_agent_hcs.append(vehicle_hc)
+                        temp_agent_noxs.append(vehicle_nox)
                     elif vehicle.__contains__('veh'):
                         temp_foes_co2s.append(vehicle_co2)
                         temp_foes_fuels.append(vehicle_fuel)
                         temp_foes_noises.append(vehicle_noise)
+                        temp_foes_cos.append(vehicle_co)
+                        temp_foes_pmxs.append(vehicle_pmx)
+                        temp_foes_hcs.append(vehicle_hc)
+                        temp_foes_noxs.append(vehicle_nox)
                     vehs[vehicle].speeds.append(vehicle_speed)
                     vehs[vehicle].dist = traci.vehicle.getDistance(vehicle)
                     vehs[vehicle].fuelconsumption.append(vehicle_fuel)
@@ -326,6 +354,10 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         else:
                             vehs[vehicle].waitingtime[-1] = vehicle_waiting
                     vehs[vehicle].co2emission.append(vehicle_co2)
+                    vehs[vehicle].coemission.append(vehicle_co)
+                    vehs[vehicle].noxemission.append(vehicle_nox)
+                    vehs[vehicle].pmxemission.append(vehicle_pmx)
+                    vehs[vehicle].hcemission.append(vehicle_hc)
                     vehs[vehicle].noiseemission.append(vehicle_noise)
                     vehs[vehicle].traveltime += (1 if secondcounter%secondtot==0 else 0) # travel time measure by the second
                     if vehicle not in passed:
@@ -503,23 +535,37 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
             agent_co2s.append(0 if len(temp_agent_co2s)==0 else np.mean(temp_agent_co2s))
             agent_noises.append(0 if len(temp_agent_noises)==0 else np.mean(temp_agent_noises))
             agent_fuels.append(0 if len(temp_agent_fuels)==0 else np.mean(temp_agent_fuels))
+            agent_cos.append(0 if len(temp_agent_cos)==0 else np.mean(temp_agent_cos))
+            agent_pmxs.append(0 if len(temp_agent_pmxs)==0 else np.mean(temp_agent_pmxs))
+            agent_noxs.append(0 if len(temp_agent_noxs)==0 else np.mean(temp_agent_noxs))
+            agent_hcs.append(0 if len(temp_agent_hcs)==0 else np.mean(temp_agent_hcs))
             foes_co2s.append(0 if len(temp_foes_co2s)==0 else np.mean(temp_foes_co2s))
             foes_noises.append(0 if len(temp_foes_noises)==0 else np.mean(temp_foes_noises))
             foes_fuels.append(0 if len(temp_foes_fuels)==0 else np.mean(temp_foes_fuels))
+            foes_cos.append(0 if len(temp_foes_cos)==0 else np.mean(temp_foes_cos))
+            foes_pmxs.append(0 if len(temp_foes_pmxs)==0 else np.mean(temp_foes_pmxs))
+            foes_noxs.append(0 if len(temp_foes_noxs)==0 else np.mean(temp_foes_noxs))
+            foes_hcs.append(0 if len(temp_foes_hcs)==0 else np.mean(temp_foes_hcs))
         # loop is broken, time to return values
         proceed = True
         retds = []
         # gathering data of all vehicles that correctly arrived and that traversed paths of interest
         for vehicle in vehs:
             if vehs[vehicle].arrived and (not vehicle.__contains__('bus') or not vehicle.__contains__('random')):
-                retds.append((vehicle,vehs[vehicle].alg,(0 if len(vehs[vehicle].speeds)==0 else np.mean(vehs[vehicle].speeds)),vehs[vehicle].dist,sum(vehs[vehicle].fuelconsumption),vehs[vehicle].waitingtime,sum(vehs[vehicle].noiseemission),sum(vehs[vehicle].co2emission),vehs[vehicle].traveltime))
-            elif not vehs[vehicle].arrived and (not vehicle.__contains__('bus') or not vehicle.__contains__('random')) and vehs[vehicle].route is not None:
-                counting = False
-                for ed in vehs[vehicle].route:
-                    vehs[vehicle].traveltime += (net.getEdge(ed).getLength()/net.getEdge(ed).getSpeed()*(20 if ed in works else 1) if counting else 0)
-                    if ed == vehs[vehicle].currentroad:
-                        counting = True
-                retds.append((vehicle,vehs[vehicle].alg,(0 if len(vehs[vehicle].speeds)==0 else np.mean(vehs[vehicle].speeds)),vehs[vehicle].dist,sum(vehs[vehicle].fuelconsumption),vehs[vehicle].waitingtime,sum(vehs[vehicle].noiseemission),sum(vehs[vehicle].co2emission),vehs[vehicle].traveltime))
+                retds.append((vehicle,
+                          vehs[vehicle].alg,
+                          (0 if len(vehs[vehicle].speeds)==0 else np.mean(vehs[vehicle].speeds)),
+                          vehs[vehicle].dist,
+                          sum(vehs[vehicle].fuelconsumption),
+                          sum(vehs[vehicle].waitingtime),
+                          sum(vehs[vehicle].noiseemission),
+                          sum(vehs[vehicle].co2emission),
+                          vehs[vehicle].traveltime,
+                          sum(vehs[vehicle].coemission),
+                          sum(vehs[vehicle].pmxemission),
+                          sum(vehs[vehicle].hcemission),
+                          sum(vehs[vehicle].noxemission)
+                        ))
         traci.close()
         # gathering data from checkpoints (THIS WILL PROBABLY BE REMOVED)
         speed_time_averages = []

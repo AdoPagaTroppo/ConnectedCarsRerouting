@@ -14,6 +14,10 @@ class VehicleData:
         self.waitingtime = [0] # array of waiting times for keeping track of the vehicle's waiting time situations
         self.noiseemission = [] # array of noise emissions for keeping track of the vehicle's noise emissions
         self.co2emission = [] # array of CO2 emissions for keeping track of the vehicle's emissions
+        self.coemission = [] # array of CO emissions for keeping track of the vehicle's emissions
+        self.noxemission = [] # array of NOx emissions for keeping track of the vehicle's emissions
+        self.pmxemission = [] # array of PMx emissions for keeping track of the vehicle's emissions
+        self.hcemission = [] # array of HC emissions for keeping track of the vehicle's emissions
         self.traveltime = 0 # travel time
         self.influence = 0.5 # vehicle influence in signalling wip areas
         self.currentroad = '' # non-crossing edge on which the vehicle is
