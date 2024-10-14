@@ -250,8 +250,8 @@ if RUN_SIMULATION:
             # start simulations and repeat them
             for j in range(start,repeatsim):
                 ssize = 0.05
-                if i == 0:
-                    ssize = 1.0
+                # if i == 0:
+                #     ssize = 1.0
                 retval,agents,arrived,sta,ssa,fa,atd,ftd = single_sim(NUMBER_OF_CARS,1.0,True,TIME_HORIZON,ssize,True,True,12,step_perc*(i),mapdata,False,i,NUM_ALGS=NUM_ALGS,ONLINE=False,CONSIDER_WORKS=False)
                 # retval,agents,arrived,sta,ssa,fa,atd,ftd = single_sim(NUMBER_OF_CARS,1.0,False,i,ssize,True,True,12,1,mapdata,False,i,NUM_ALGS=NUM_ALGS,ONLINE=True,CONSIDER_WORKS=False) # decomment this and comment the previous line for time analysis
                 # prepare data structures for file saving

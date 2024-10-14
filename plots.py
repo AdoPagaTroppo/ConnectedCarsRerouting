@@ -51,13 +51,13 @@ def versus_plotter(x,avg_array1,std_array1,avg_array2,std_array2,title,save_fig,
     std_array2 = np.array(std_array2)
     plt.style.use('ggplot')
     fig, ax = plt.subplots(figsize=(10,5))
-    ax.plot(x,avg_array1,color='red',label='average '+str(title).lower().replace(' ','_')+' of controlled cars')
+    ax.plot(x,avg_array1,color='red',label='average '+str(title).lower()+' of controlled cars')
     ax.fill_between(x,avg_array1-std_array1,avg_array1+std_array1,color='#888888', alpha=0.4)
-    ax.plot(x,avg_array2,color='blue',label='average '+str(title).lower().replace(' ','_')+' of uncontrolled cars')
+    ax.plot(x,avg_array2,color='blue',label='average '+str(title).lower()+' of uncontrolled cars')
     ax.fill_between(x,avg_array2-std_array2,avg_array2+std_array2,color='#888888', alpha=0.4)
     # plt.plot(array)
     ax.set_title(str(title)+' and controlled cars')
-    ax.set_xlabel('Number of controlled cars')
+    ax.set_xlabel('Percentage of controlled cars')
     ax.set_ylabel('Average '+str(title))
     ax.legend(loc='best')
     if save_fig:
@@ -300,19 +300,19 @@ def elaborate_and_make_plots(TIMEDATA=False):
                     
             
         # create plots    
-        plotter.plotter(x_axis,speedsplot,speedsplot_std,'speed',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[m/s]')
-        plotter.plotter(x_axis,fuels,fuels_std,'fuel consumption',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[mg/s]')
-        plotter.plotter(x_axis,waitingtimes,waitingtimes_std,'waiting times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[s]')
-        plotter.plotter(x_axis,noise,noise_std,'noise emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[dbA]')
-        plotter.plotter(x_axis,co2em,co2em_std,'CO2 emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[mg/s]')
-        plotter.plotter(x_axis,traveltimes,traveltimes_std,'travel times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[s]')
+        plotter(x_axis,speedsplot,speedsplot_std,'speed',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[m/s]')
+        plotter(x_axis,fuels,fuels_std,'fuel consumption',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[mg/s]')
+        plotter(x_axis,waitingtimes,waitingtimes_std,'waiting times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[s]')
+        plotter(x_axis,noise,noise_std,'noise emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[dbA]')
+        plotter(x_axis,co2em,co2em_std,'CO2 emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[mg/s]')
+        plotter(x_axis,traveltimes,traveltimes_std,'travel times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[s]')
         
-        plotter.versus_plotter(x_axis,agentspeedsplot,agentspeedsplot_std,foespeedsplot,foespeedsplot_std,'speed',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.versus_plotter(x_axis,agentfuels,agentfuels_std,foefuels,foefuels_std,'fuel consumption',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.versus_plotter(x_axis,agentwaitingtimes,agentwaitingtimes_std,foewaitingtimes,foewaitingtimes_std,'waiting times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.versus_plotter(x_axis,agentnoise,agentnoise_std,foenoise,foenoise_std,'noise emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.versus_plotter(x_axis,agentco2em,agentco2em_std,foeco2em,foeco2em_std,'CO2 emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.versus_plotter(x_axis,agenttraveltimes,agenttraveltimes_std,foetraveltimes,foetraveltimes_std,'travel times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        versus_plotter(x_axis,agentspeedsplot,agentspeedsplot_std,foespeedsplot,foespeedsplot_std,'speed',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        versus_plotter(x_axis,agentfuels,agentfuels_std,foefuels,foefuels_std,'fuel consumption',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        versus_plotter(x_axis,agentwaitingtimes,agentwaitingtimes_std,foewaitingtimes,foewaitingtimes_std,'waiting times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        versus_plotter(x_axis,agentnoise,agentnoise_std,foenoise,foenoise_std,'noise emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        versus_plotter(x_axis,agentco2em,agentco2em_std,foeco2em,foeco2em_std,'CO2 emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        versus_plotter(x_axis,agenttraveltimes,agenttraveltimes_std,foetraveltimes,foetraveltimes_std,'travel times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
     else:
         filelist = [x for x in filelist if x.__contains__('_timedata')]
         NUMBER_OF_CARS = 10
@@ -345,9 +345,9 @@ def elaborate_and_make_plots(TIMEDATA=False):
                     foes_fuel = payload
         x_axis = [i for i in range(0,len(agent_co2))]
         std0 = [0]*len(agent_co2)
-        plotter.versus_plotter(x_axis,agent_co2,std0,foes_co2,std0,'Over-time co2',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.versus_plotter(x_axis,agent_noise,std0,foes_noise,std0,'Over-time noise',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
-        plotter.versus_plotter(x_axis,agent_fuel,std0,foes_fuel,std0,'Over-time fuel',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        versus_plotter(x_axis,agent_co2,std0,foes_co2,std0,'Over-time co2',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        versus_plotter(x_axis,agent_noise,std0,foes_noise,std0,'Over-time noise',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
+        versus_plotter(x_axis,agent_fuel,std0,foes_fuel,std0,'Over-time fuel',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
         
 
 if __name__ == "__main__":
