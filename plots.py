@@ -301,10 +301,10 @@ def elaborate_and_make_plots(TIMEDATA=False):
             
         # create plots    
         plotter(x_axis,speedsplot,speedsplot_std,'speed',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[m/s]')
-        plotter(x_axis,fuels,fuels_std,'fuel consumption',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[mg/s]')
+        plotter(x_axis,fuels,fuels_std,'fuel consumption',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[mg]')
         plotter(x_axis,waitingtimes,waitingtimes_std,'waiting times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[s]')
         plotter(x_axis,noise,noise_std,'noise emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[dbA]')
-        plotter(x_axis,co2em,co2em_std,'CO2 emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[mg/s]')
+        plotter(x_axis,co2em,co2em_std,'CO2 emissions',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[mg]')
         plotter(x_axis,traveltimes,traveltimes_std,'travel times',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON,'[s]')
         
         versus_plotter(x_axis,agentspeedsplot,agentspeedsplot_std,foespeedsplot,foespeedsplot_std,'speed',SAVE_IMG,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON)
