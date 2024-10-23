@@ -7,7 +7,7 @@ from behaviours_maker import index2alg
 
 # UNISA NET ------------
 print('loading file')
-behaviors_name = r"behaviors_Unisa_4_wip.npy" # change the name of the file according to the running simulation
+behaviors_name = r"behaviors_Salerno_4_wip.npy" # change the name of the file according to the running simulation
 
 behaviors = np.load(behaviors_name) # load behaviours file
 
@@ -75,6 +75,7 @@ class Crowdsourcing():
             for i in range(dim):
                 rHat[stateSpace[i]] = -min(weights[:,i]) #Calculate rHat
                 if verbose:
+                    print('edge '+str(edgelist[stateSpace[i]]))
                     print('rHat')
                     print([x for x in rHat if x!=0])
                     print('weights')

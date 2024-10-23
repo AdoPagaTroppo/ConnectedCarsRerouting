@@ -18,12 +18,12 @@ CREATE_BEHAVIOURS = False # put to True if offline paths and behaviours need to 
 RUN_SIMULATION = True # put to True if simulations must be run
 NUM_ALGS = 4 # number of behaviours to take into account
 IMG_FOLDER = 'SalernoScenario_12h_incident/' # folder in which files will be saved
-SCENARIO = 'Unisa' # name of the scenario
+SCENARIO = 'Salerno' # name of the scenario
 NUMBER_OF_CARS = 20 # number of cars that will enter the simulation
 NUM_AGENTS = 1 # number of agents to enter the simulation (this will be ignored if USE_NUM_AGENTS=False)
 USE_NUM_AGENTS = True # consider NUM_AGENTS as the number of agents to enter the simulation or use the percentage value expressed by PERC_AGENTS
 PERC_AGENTS = 0.3 # percentage of agent vehicles among the vehicles traversing paths of interest
-TIME_HORIZON = 3 # time horizon for the crowdsourcing algorithm, keep around 5
+TIME_HORIZON = 5 # time horizon for the crowdsourcing algorithm, keep around 5
 SAVE_FILE = False # put to True if files for algorithm evaluation need to be saved
 
 USE_PARAM_GUI = True # put to True if you want to use the parameter GUI
