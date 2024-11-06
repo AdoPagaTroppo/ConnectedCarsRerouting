@@ -69,12 +69,14 @@ def spawnUncontrolledCars(num_uncontrolled,mapdata):
     j = 0
     for c in range(int(num_uncontrolled)):
         # source = random.choices(sources)[0] # choose a random source
-        # source = '766350967' # starting edge in Salerno city centre map
+        source = '766350967' # starting edge in Salerno city centre map
+        # source = '108541475#0' # starting edge for debugging in Unisa map
+        # source = '-579690548#1' # starting edge in Unisa map
         # source = '330223560#1'
-        source = sources[c%20]
+        # source = sources[c%20]
         # dest = random.choices(destinations,target_weights)[0] # destination selected according to realistic traffic flows
-        dest = destinations[c%(len(destinations))] # destination selected in order
-        # dest = destinations[0] # selectable destination index
+        # dest = destinations[c%(len(destinations))] # destination selected in order
+        dest = destinations[1] # selectable destination index
         id = 'veh'+str(c+1)+'_'+str(dest[1])
         routeid = 'route'+str(c+1)
         route = traci.simulation.findRoute(source,dest[0]).edges
@@ -105,10 +107,11 @@ def spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,online,agent_start=None
     end_edge = {}
     agents = {}
     for i in range(int(NUM_AGENTS)):
-        start_edge = sources[(begin_spawn+i)%20]
+        # start_edge = sources[(begin_spawn+i)%20]
+        # start_edge = '108541475#0'
         # destt = random.choices(destinations,target_weights)[0] # destination selected according to realistic traffic flows
-        destt = destinations[i%(len(destinations))] # destination selected in order
-        # destt = destinations[0] # selectable destination index
+        # destt = destinations[i%(len(destinations))] # destination selected in order
+        destt = destinations[1] # selectable destination index
         dest = destt[0]
         agentid = 'agent'+str(i)+'_'+str(destt[1])
         agrouteid = agentid+'_route'

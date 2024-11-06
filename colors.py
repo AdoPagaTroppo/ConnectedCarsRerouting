@@ -53,23 +53,26 @@ def colorMap(r,mapdata,rewards4colors):
     minrew = np.min(r)
     minre4=0
     vals = list(rewards4colors.values())
-    sumvals = np.sum(vals)
-    if sumvals!=0:
-        maxre4 = np.max(vals)
-        minre4 = np.min(vals)
+    # sumvals = np.sum(vals)
+    sumvals = np.sum(r)
+    # if sumvals!=0:
+    #     maxre4 = np.max(vals)
+    #     minre4 = np.min(vals)
     maxr = 0
     minr = 0
     maxr = maxrew
     minr = minrew
     if sumvals == 0:
-        maxr = 1000
+        maxr = 1
     print('maxr '+str(maxr)+' minr '+str(minr)+' maxre4 '+str(maxre4)+' minre4 '+str(minre4)+' maxrew '+str(maxrew)+' minrew '+str(minrew))
     for edgeindex in range(len(edgelist)):
         ed = edgelist[edgeindex].getID()
         rvalue = minr
         colorvalue = 0
-        if r[edgeindex]!=0:
-            rewards4colors[ed] = r[edgeindex]
-            rvalue = rewards4colors[ed]
-            colorvalue = int(abs(rvalue-minr)/abs(maxr-minr)*1000)+10
+        # if r[edgeindex]!=0:
+        rewards4colors[ed] = r[edgeindex]
+        rvalue = rewards4colors[ed]
+        colorvalue = int(abs(rvalue-minr)/abs(maxr-minr)*1000)+10
+        if sumvals == 0:
+            colorvalue = 1000
         traci.edge.setParameter(ed,'color',colorvalue)
