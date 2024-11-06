@@ -147,7 +147,7 @@ def compute_reward(ss,passed,mapdata,target_edge,works,vehicle,paths,agents):
             if edid in paths[edgelist[ss[0]].getID()][agents[vehicle.id].targetIndex+pindex]:
                 relevance += 0.5
         if relevance == 0:
-            relevance = 1
+            relevance = 0.4
         # waitingtime = -traci.edge.getWaitingTime(edid)
         # prio = net.getEdge(edid).getPriority()
         # r[i] = traveltime+veh_num+road_in_wip+road_repeat+tail_in_wip-pathlen-10*density+roadspeed+pred_works
@@ -176,15 +176,15 @@ def compute_reward(ss,passed,mapdata,target_edge,works,vehicle,paths,agents):
                 if p == worktolookfor:
                     break
                 elif p in works:
-                    weight = 2000/relevance
+                    weight = 1000/relevance
                     break
-                elif distance >= 20:
+                if distance >= 20:
                     break
                 # else:
                 #     if vehicle.id in passed:
                 #         if edid in passed[vehicle.id]:
                 #             break
-            worktail = weight/(5 if distance<20 else 20)
+            worktail = weight/(5 if distance<20 else 20)/(1 if relevance!=0.4 or distance <20 else 0.4)
             # worktail = 50*distance/weight
         # if worktail == 0 and vehicle.id in passed:
         #     distance = 0
@@ -301,7 +301,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     edgelist = mapdata.edgelist
     destinations = mapdata.destinations
     checkpoints = parse_file_for_checkpoints(str(SCENARIO)+'ScenarioData/checkpoints.txt')
-    NUM_FOES = NUM_VEHICLES-NUM_AGENTS
+    NUM_FOES = int(NUM_VEHICLES*PERC_UNI_CARS)-NUM_AGENTS
     vehs = spawnUncontrolledCars(int(NUM_FOES),mapdata) # load uncontrolled cars
     agents,end_edge = spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,ONLINE) # load controlled cars
     print('loaded vehicles')
@@ -358,7 +358,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     foes_hcs = []
     measure = True
     while True:
-        if len(insim)==0 and totarrived>=1: # if simulation is empty and at least 1 vehicle arrived, stop loop (it works under the hypothesis of the simulation always having a vehicle inside)
+        if len([x for x in insim if not x.__contains__('bus') and not x.__contains__('random')])==0 and totarrived>=1: # if simulation is empty and at least 1 vehicle arrived, stop loop (it works under the hypothesis of the simulation always having a vehicle inside)
             break
         traci.simulationStep() # step of the loop
         vehicles_in_sim = traci.vehicle.getIDList()
