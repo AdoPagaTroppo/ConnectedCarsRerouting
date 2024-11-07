@@ -14,10 +14,11 @@ from spawners import *
 from colors import *
 from text2speech_handler import playAudio
 from node_file_parser import parse_file_for_checkpoints
+from text2speech_handler import search_next
 import time
 
 WORKS_THRESHOLD = 1 # threshold value after which an area is considered to be "work-in-progress"
-PLAY_AUDIO = False # flag for defining whether to play direction audios or not
+PLAY_AUDIO = True # flag for defining whether to play direction audios or not
 
 # method for making a car signal a fake wip area, inputs are:
 # - probability of signalling the edge as a wip area,
@@ -357,6 +358,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     foes_noxs = []
     foes_hcs = []
     measure = True
+    played_audio_edge = None
     while True:
         if len([x for x in insim if not x.__contains__('bus') and not x.__contains__('random')])==0 and totarrived>=1: # if simulation is empty and at least 1 vehicle arrived, stop loop (it works under the hypothesis of the simulation always having a vehicle inside)
             break
@@ -502,7 +504,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                         if len(vn)>2: # there is more than 1 valid neighbour
                             r = compute_reward(ss,passed[vehicle],mapdata,end_edge[vehicle],works,vehs[vehicle],paths_db,agents)
                             if colorreward:
-                                colorMap(r,mapdata,rewards4colors)
+                                colorMap(r,mapdata,rewards4colors,ss_edges)
                                 for stre in edgelist:
                                     if not any(stre.getID() in paths_db[currentid][agents[vehicle].targetIndex+checindex] for checindex in range(NUM_ALGS)):
                                         traci.edge.setParameter(stre.getID(),'color',0)
@@ -530,7 +532,15 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                             selpath = paths_db[currentid][agents[vehicle].targetIndex+indmin]
                     if len(vn2)>2: # upon crossing with multiple possible selections, play audio
                         if NUM_AGENTS==1 and currentid==roadid and PLAY_AUDIO:
-                            playAudio(mapdata,currentid,prox_edge,LANG)
+                            playAudio(mapdata,currentid,prox_edge,LANG,roundabout=(currentid in mapdata.streets_in_roundabouts))
+                    else: # look for next crossing, then play audio
+                        if NUM_AGENTS==1 and PLAY_AUDIO and selpath is not None:
+                            true_play_audio, in_roundabout, dist, audio_edge, prev_audio_edge = search_next(mapdata,paths_db[currentid][agents[vehicle].targetIndex+indmin])
+                            if currentid in mapdata.streets_in_roundabouts: # next selection is inside a roundabout, no need for audio play
+                                true_play_audio = False
+                            if true_play_audio and audio_edge!=played_audio_edge:
+                                playAudio(mapdata,currentid,net.getEdge(audio_edge),LANG,dist,net.getEdge(prev_audio_edge),in_roundabout,path=(None if not in_roundabout or paths_db[currentid] is None else paths_db[currentid][agents[vehicle].targetIndex+indmin]))
+                                played_audio_edge = audio_edge
                     next_edge[vehicle] = prox_edge.getID()
                     if prox_edge.getID() == end_edge[vehicle]:
                         print(vehicle+' ARRIVED')
