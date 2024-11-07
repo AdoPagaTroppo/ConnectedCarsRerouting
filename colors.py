@@ -46,11 +46,11 @@ def getIfromRGB(rgb):
 # - reward array,
 # - data structure containing all static data related to the map,
 # - data structure keeping track of previously colored streets
-def colorMap(r,mapdata,rewards4colors):
+def colorMap(r,mapdata,rewards4colors,ss_edges):
     edgelist = mapdata.edgelist
-    maxrew = np.max(r)
+    maxrew = np.max(r[r!=0])
     maxre4=0
-    minrew = np.min(r)
+    minrew = np.min(r[r!=0])
     minre4=0
     vals = list(rewards4colors.values())
     # sumvals = np.sum(vals)
@@ -72,7 +72,14 @@ def colorMap(r,mapdata,rewards4colors):
         # if r[edgeindex]!=0:
         rewards4colors[ed] = r[edgeindex]
         rvalue = rewards4colors[ed]
-        colorvalue = int(abs(rvalue-minr)/abs(maxr-minr)*1000)+10
+        diff = maxr-minr
+        numdiff = rvalue-minr
+        if diff == 0:
+            diff = 1
+            numdiff = 1
+        colorvalue = int(abs(numdiff)/abs(diff)*1000)+10
         if sumvals == 0:
             colorvalue = 1000
+        if ed not in ss_edges:
+            colorvalue = 0
         traci.edge.setParameter(ed,'color',colorvalue)

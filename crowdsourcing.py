@@ -7,7 +7,7 @@ from behaviours_maker import index2alg
 
 # UNISA NET ------------
 print('loading file')
-behaviors_name = r"behaviors_Salerno_4_wip.npy" # change the name of the file according to the running simulation
+behaviors_name = r"behaviors_Unisa_4_wip.npy" # change the name of the file according to the running simulation
 
 behaviors = np.load(behaviors_name) # load behaviours file
 
