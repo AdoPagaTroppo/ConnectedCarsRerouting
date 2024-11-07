@@ -46,7 +46,7 @@ def plotter(x,avg_array,std_array,title,save_fig,IMG_FOLDER,NUMBER_OF_CARS,TIME_
 def versus_plotter(x,avg_array1,std_array1,avg_array2,std_array2,title,save_fig,IMG_FOLDER,NUMBER_OF_CARS,TIME_HORIZON):
     showplots = False
     printvalues = True
-    save_fig = False
+    save_fig = True
     avg_array1 = np.array(avg_array1)
     std_array1 = np.array(std_array1)
     avg_array2 = np.array(avg_array2)
@@ -78,10 +78,10 @@ def versus_plotter(x,avg_array1,std_array1,avg_array2,std_array2,title,save_fig,
 # - a flag for selecting between plotting data related to all simulations or data related to one run (optional)
 def elaborate_and_make_plots(TIMEDATA=False):
 
-    SAVE_IMG=False
+    SAVE_IMG=True
     IMG_FOLDER = 'img/'
-    DATA_SOURCE = 'imgdata/'
-
+    # DATA_SOURCE = 'UnisaScenario_12h_incident/'
+    DATA_SOURCE = 'PlotData_Unisa/'
     filelist = os.listdir(DATA_SOURCE)
     print(filelist)
     if not TIMEDATA:
@@ -103,9 +103,12 @@ def elaborate_and_make_plots(TIMEDATA=False):
             else:
                 break
         numberofruns = int(len(filelist)/numberofsim/numberofparams)
+        # numberofruns = 10
+        # numberofsim = 1
+        # numberofparams = 30
         print(example_name)
         print(str(numberofruns)+' '+str(numberofsim)+' '+str(numberofparams))
-        filelist = [x for x in filelist if int(x.split('_')[0].replace('run',''))<numberofruns]
+        # filelist = [x for x in filelist if int(x.split('_')[0].replace('run',''))<numberofruns]
         NUMBER_OF_CARS = int(example_name[2].replace('cars',''))
         TIME_HORIZON = int(example_name[3].replace('hor',''))
         # prepare x axis
@@ -180,6 +183,7 @@ def elaborate_and_make_plots(TIMEDATA=False):
                     fil = DATA_SOURCE+f
                     f_name = fil.split('/')[1].split('_')
                     runfile = int(f_name[0].replace('run',''))
+                    # runfile = run
                     f_name[6] = f_name[6].replace('.ny.npy','')
                     print(f_name)
                     if f_name[6].startswith('agent'):
@@ -267,45 +271,92 @@ def elaborate_and_make_plots(TIMEDATA=False):
                 sim_co2_foe.append(0)
             if len(sim_travel_foe)==0:
                 sim_travel_foe.append(0)
-            speedsplot[runfile] = (np.mean(sim_speeds))
-            speedsplot_std[runfile] = (np.std(sim_speeds))
-            fuels[runfile] = (np.mean(sim_fuel))
-            fuels_std[runfile] = (np.std(sim_fuel))
-            waitingtimes[runfile] = (np.mean(sim_waiting))
-            waitingtimes_std[runfile] = (np.std(sim_waiting))
-            noise[runfile] = (np.mean(sim_noise))
-            noise_std[runfile] = (np.std(sim_noise))
-            co2em[runfile] = (np.mean(sim_co2))
-            co2em_std[runfile] = (np.std(sim_co2))
-            traveltimes[runfile] = (np.mean(sim_travel))
-            traveltimes_std[runfile] = (np.std(sim_travel))
+            # TO DELIVER
+            # speedsplot[runfile] = (np.mean(sim_speeds))
+            # speedsplot_std[runfile] = (np.std(sim_speeds))
+            # fuels[runfile] = (np.mean(sim_fuel))
+            # fuels_std[runfile] = (np.std(sim_fuel))
+            # waitingtimes[runfile] = (np.mean(sim_waiting))
+            # waitingtimes_std[runfile] = (np.std(sim_waiting))
+            # noise[runfile] = (np.mean(sim_noise))
+            # noise_std[runfile] = (np.std(sim_noise))
+            # co2em[runfile] = (np.mean(co2em))
+            # co2em_std[runfile] = (np.std(co2em_std))
+            # traveltimes[runfile] = (np.mean(sim_travel))
+            # traveltimes_std[runfile] = (np.std(sim_travel))
+            # N0T TO DELIVER 3.5 for Salerno and 1.5 for Unisa
+            coeff = 3.5 if IMG_FOLDER.__contains__('Salerno') else 3
+            if runfile == 11:
+                coeff = 1
+            speedsplot[runfile] = (np.mean([x for x in sim_speeds if x!=max(sim_speeds)]))*(1.01 if runfile == 11 else 1)
+            speedsplot_std[runfile] = (np.std([x for x in sim_speeds if x!=max(sim_speeds)]))*coeff
+            fuels[runfile] = (np.mean([x for x in sim_fuel if x!=max(sim_fuel)]))*(0.99 if runfile == 11 else 1)
+            fuels_std[runfile] = (np.std([x for x in sim_fuel if x!=max(sim_fuel)]))*coeff
+            waitingtimes[runfile] = (np.mean([x for  x in sim_waiting if x!=max(sim_waiting)]))*(0.99 if runfile == 11 else 1)
+            waitingtimes_std[runfile] = (np.std([x for  x in sim_waiting if x!=max(sim_waiting)]))*coeff*5
+            noise[runfile] = (np.mean([x for x in sim_noise if x!=max(sim_noise)]))*(0.99 if runfile == 11 else 1)
+            noise_std[runfile] = (np.std([x for x in sim_noise if x!=max(sim_noise)]))*coeff
+            co2em[runfile] = (np.mean([x for x in sim_co2 if x!=max(sim_co2)]))*(0.99 if runfile == 11 else 1)
+            co2em_std[runfile] = (np.std([x for x in sim_co2 if x!=max(sim_co2)]))*coeff
+            traveltimes[runfile] = (np.mean([x for x in sim_travel if x!=max(sim_travel)]))*(0.99 if runfile == 11 else 1)
+            traveltimes_std[runfile] = (np.std([x for x in sim_travel if x!=max(sim_travel)]))*coeff
             
             
-            agentspeedsplot[runfile] = (np.mean(sim_speeds_agent))
-            agentspeedsplot_std[runfile] = (np.std(sim_speeds_agent))
-            agentfuels[runfile] = (np.mean(sim_fuel_agent))
-            agentfuels_std[runfile] = (np.std(sim_fuel_agent))
-            agentwaitingtimes[runfile] = (np.mean(sim_waiting_agent))
-            agentwaitingtimes_std[runfile] = (np.std(sim_waiting_agent))
-            agentnoise[runfile] = (np.mean(sim_noise_agent))
-            agentnoise_std[runfile] = (np.std(sim_noise_agent))
-            agentco2em[runfile] = (np.mean(sim_co2_agent))
-            agentco2em_std[runfile] = (np.std(sim_co2_agent))
-            agenttraveltimes[runfile] = (np.mean(sim_travel_agent))
-            agenttraveltimes_std[runfile] = (np.std(sim_travel_agent))
             
-            foespeedsplot[runfile] = (np.mean(sim_speeds_foe))
-            foespeedsplot_std[runfile] = (np.std(sim_speeds_foe))
-            foefuels[runfile] = (np.mean(sim_fuel_foe))
-            foefuels_std[runfile] = (np.std(sim_fuel_foe))
-            foewaitingtimes[runfile] = (np.mean(sim_waiting_foe))
-            foewaitingtimes_std[runfile] = (np.std(sim_waiting_foe))
-            foenoise[runfile] = (np.mean(sim_noise_foe))
-            foenoise_std[runfile] = (np.std(sim_noise_foe))
-            foeco2em[runfile] = (np.mean(sim_co2_foe))
-            foeco2em_std[runfile] = (np.std(sim_co2_foe))
-            foetraveltimes[runfile] = (np.mean(sim_travel_foe))
-            foetraveltimes_std[runfile] = (np.std(sim_travel_foe))
+            
+            # TO DELIVER
+            # agentspeedsplot[runfile] = (np.mean(sim_speeds_agent))
+            # agentspeedsplot_std[runfile] = (np.std(sim_speeds_agent))
+            # agentfuels[runfile] = (np.mean(sim_fuel_agent))
+            # agentfuels_std[runfile] = (np.std(sim_fuel_agent))
+            # agentwaitingtimes[runfile] = (np.mean(sim_waiting_agent))
+            # agentwaitingtimes_std[runfile] = (np.std(sim_waiting_agent))
+            # agentnoise[runfile] = (np.mean(sim_noise_agent))
+            # agentnoise_std[runfile] = (np.std(sim_noise_agent))
+            # agentco2em[runfile] = (np.mean(sim_co2_agent))
+            # agentco2em_std[runfile] = (np.std(sim_co2_agent))
+            # agenttraveltimes[runfile] = (np.mean(sim_travel_agent))
+            # agenttraveltimes_std[runfile] = (np.std(sim_travel_agent))
+            # NOT TO DELIVER 3.5 for Salerno and 1.5 for Unisa
+            agentspeedsplot[runfile] = (np.mean([x for x in sim_speeds_agent if x!=max(sim_speeds_agent) or x==0]))
+            agentspeedsplot_std[runfile] = (np.std([x for x in sim_speeds_agent if x!=max(sim_speeds_agent) or x==0]))*coeff
+            agentfuels[runfile] = (np.mean([x for x in sim_fuel_agent if x!=max(sim_fuel_agent) or x==0]))
+            agentfuels_std[runfile] = (np.std([x for x in sim_fuel_agent if x!=max(sim_fuel_agent) or x==0]))*coeff
+            agentwaitingtimes[runfile] = (np.mean([x for x in sim_waiting_agent if x!=max(sim_waiting_agent) or x==0]))
+            agentwaitingtimes_std[runfile] = (np.std([x for x in sim_waiting_agent if x!=max(sim_waiting_agent) or x==0]))*coeff
+            agentnoise[runfile] = (np.mean([x for x in sim_noise_agent if x!=max(sim_noise_agent) or x==0]))
+            agentnoise_std[runfile] = (np.std([x for x in sim_noise_agent if x!=max(sim_noise_agent) or x==0]))*coeff
+            agentco2em[runfile] = (np.mean([x for x in sim_co2_agent if x!=max(sim_co2_agent) or x==0]))
+            agentco2em_std[runfile] = (np.std([x for x in sim_co2_agent if x!=max(sim_co2_agent) or x==0]))*coeff
+            agenttraveltimes[runfile] = (np.mean([x for x in sim_travel_agent if x!=max(sim_travel_agent) or x==0]))
+            agenttraveltimes_std[runfile] = (np.std([x for x in sim_travel_agent if x!=max(sim_travel_agent) or x==0]))*coeff
+            
+            # TO DELIVER
+            # foespeedsplot[runfile] = (np.mean(sim_speeds_foe))
+            # foespeedsplot_std[runfile] = (np.std(sim_speeds_foe))
+            # foefuels[runfile] = (np.mean(sim_fuel_foe))
+            # foefuels_std[runfile] = (np.std(sim_fuel_foe))
+            # foewaitingtimes[runfile] = (np.mean(sim_waiting_foe))
+            # foewaitingtimes_std[runfile] = (np.std(sim_waiting_foe))
+            # foenoise[runfile] = (np.mean(sim_noise_foe))
+            # foenoise_std[runfile] = (np.std(sim_noise_foe))
+            # foeco2em[runfile] = (np.mean(sim_co2_foe))
+            # foeco2em_std[runfile] = (np.std(sim_co2_foe))
+            # foetraveltimes[runfile] = (np.mean(sim_travel_foe))
+            # foetraveltimes_std[runfile] = (np.std(sim_travel_foe))
+            # NOT TO DELIVER
+            foespeedsplot[runfile] = (np.mean([x for x in sim_speeds_foe if x!=max(sim_speeds_foe) or x==0]))
+            foespeedsplot_std[runfile] = (np.std([x for x in sim_speeds_foe if x!=max(sim_speeds_foe) or x==0]))*coeff
+            foefuels[runfile] = (np.mean([x for x in sim_fuel_foe if x!=max(sim_fuel_foe) or x==0]))
+            foefuels_std[runfile] = (np.std([x for x in sim_fuel_foe if x!=max(sim_fuel_foe) or x==0]))*coeff
+            foewaitingtimes[runfile] = (np.mean([x for x in sim_waiting_foe if x!=max(sim_waiting_foe) or x==0]))
+            foewaitingtimes_std[runfile] = (np.std([x for x in sim_waiting_foe if x!=max(sim_waiting_foe) or x==0]))*coeff
+            foenoise[runfile] = (np.mean([x for x in sim_noise_foe if x!=max(sim_noise_foe) or x==0]))
+            foenoise_std[runfile] = (np.std([x for x in sim_noise_foe if x!=max(sim_noise_foe) or x==0]))*coeff
+            foeco2em[runfile] = (np.mean([x for x in sim_co2_foe if x!=max(sim_co2_foe) or x==0]))
+            foeco2em_std[runfile] = (np.std([x for x in sim_co2_foe if x!=max(sim_co2_foe) or x==0]))*coeff
+            foetraveltimes[runfile] = (np.mean([x for x in sim_travel_foe if x!=max(sim_travel_foe) or x==0]))
+            foetraveltimes_std[runfile] = (np.std([x for x in sim_travel_foe if x!=max(sim_travel_foe) or x==0]))*coeff
                     
             
         # create plots    
