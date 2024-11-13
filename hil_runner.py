@@ -78,7 +78,7 @@ def reading_thread_file(mapdata):
         print(coords[i])
         while not proceed: # coordinating with simulation steps
             pass
-        sleep(0.01)
+        sleep(0.13)
     stop = True
     exit()
 
@@ -184,7 +184,6 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     targets = mapdata.targets
     edgelist = mapdata.edgelist
     destinations = mapdata.destinations
-    checkpoints = parse_file_for_checkpoints(str(SCENARIO)+'ScenarioData/checkpoints.txt')
     while msg is None: # GPS signal has yet to be received
         pass
     print('message read')
@@ -261,7 +260,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
         while True:
             proceed = False
             move = False
-            if len(insim)==0 and totarrived>=1: # if simulation is empty and at least 1 vehicle arrived, stop loop (it works under the hypothesis of the simulation always having a vehicle inside)
+            if len([x for x in insim if not x.__contains__('bus') and not x.__contains__('random')])==0 and totarrived>=1: # if simulation is empty and at least 1 vehicle arrived, stop loop (it works under the hypothesis of the simulation always having a vehicle inside)
                 break
             traci.simulationStep() # step of the loop
             vehicles_in_sim = traci.vehicle.getIDList()
@@ -392,10 +391,6 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     if vehicle == agent_car and not thread.is_alive:
                         print('thread is not alive')
                         traci.vehicle.setSpeed(agent_car,-1)
-                    if roadid in checkpoints: # checkpoints data update (THIS WILL PROBABLY BE DELETED AS IT HAS NO USE)
-                        if secondcounter%secondtot==0:
-                            checkpoints[roadid]['speed'].append(vehicle_speed)
-                            checkpoints[roadid]['flow'] += 1
                     # if vehicle is an agent and it enters a new edge/crossing, launch the decision making step
                     if vehicle.__contains__('agent') and (vehicle not in prev_edge or vehicle in prev_edge and prev_edge[vehicle]!=roadid) and (vehicle in next_edge and next_edge[vehicle]!=end_edge[vehicle] or vehicle not in next_edge) and len(roadid)>2:
                         # currentid = roadid if not roadid.__contains__(':') else next_edge[vehicle] # identify id of edge on which make the evaluations
@@ -439,12 +434,10 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                             behaviour_created.append((v.getID(),end_edge[vehicle]))
                                 
                             if len(vn)>2 or len(signalled_works)!=prev_signalled_works: # there is more than 1 valid neighbour
-                                r = compute_reward(ss,passed[vehicle],mapdata,end_edge[vehicle],signalled_works,vehs[vehicle],paths_db,agents) # compute reward
+                                r = compute_reward(ss,mapdata,signalled_works,vehs[vehicle],paths_db,agents) # compute reward
                                 if colorreward:
                                     colorMap(r,mapdata,rewards4colors,ss_edges)
                                 new_state,indmin = agents[vehicle].receding_horizon_DM(statecars,T_HORIZON,ss,r,ONLINE,behaviour_db,edgelist) # use crowdsourcing algorithm to select the next state
-                                if currentid == '122726139':
-                                    indmin = 2
                                 prox_edge = edgelist[new_state] # find newly-selected edge
                                 # update VehicleData attributes and variable for selected path
                                 if ONLINE:
@@ -459,8 +452,6 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                 prox_edge = vn[1] # select next edge as destination
                                 # update VehicleData attributes and variable for selected path
                                 indmin = vehs[vehicle].selected_id
-                                if currentid == '122726139':
-                                    indmin = 2
                                 selpath = paths_db[currentid][agents[vehicle].targetIndex+indmin]
                             else: # edge is destination
                                 prox_edge = vn[0]
@@ -576,38 +567,8 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                           sum(vehs[vehicle].noxemission)
                         ))
         traci.close()
-        # gathering data from checkpoints (THIS WILL PROBABLY BE REMOVED)
-        speed_time_averages = []
-        speed_space_averages = []
-        flow_averages = []
-        for t in destinations:
-            checkpoint = None
-            for c in checkpoints:
-                if t[1] in checkpoints[c]['place']:
-                    checkpoint = checkpoints[c]
-            if len(checkpoint['speed'])>0:
-                speed_time_averages.append(sum(checkpoint['speed'])/len(checkpoint['speed'])*t[2])
-                inversesum = 0
-                for sp in checkpoint['speed']:
-                    if sp>0:
-                        inversesum += 1/sp
-                if inversesum>0:
-                    speed_space_averages.append(len(checkpoint['speed'])/inversesum*t[2])
-                    flow_averages.append(checkpoint['flow']*3600/scounter*t[2])
-        speed_tavg = sum(speed_time_averages)/100
-        speed_savg = sum(speed_space_averages)/100
-        flow_avg = sum(flow_averages)/100
-        # gathering time data of metrics of cars
-        agent_time_data = {}
-        foes_time_data = {}
-        agent_time_data['co2'] = agent_co2s
-        agent_time_data['fuel'] = agent_fuels
-        agent_time_data['noise'] = agent_noises
-        foes_time_data['co2'] = foes_co2s
-        foes_time_data['fuel'] = foes_fuels
-        foes_time_data['noise'] = foes_noises
                 
-        return retds,NUM_AGENTS,correctlyarrived,speed_tavg,speed_savg,flow_avg,agent_time_data,foes_time_data
+        return retds,NUM_AGENTS,correctlyarrived
     else:
         return None
 

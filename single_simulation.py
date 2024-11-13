@@ -1,7 +1,5 @@
 # Module for running simulations for algorithm validation
 
-from algorithms import connection_exists
-from algorithms import build_path
 from vehicledata import VehicleData
 import random
 import traci
@@ -13,7 +11,6 @@ from intercar_comm import tweet
 from spawners import *
 from colors import *
 from text2speech_handler import playAudio
-from node_file_parser import parse_file_for_checkpoints
 from text2speech_handler import search_next
 import time
 
@@ -56,25 +53,18 @@ def state_space(n_node, tHor,mapdata,target):
 
 # method for creating the reward array for each of the edges of the reduced state space, inputs are:
 # - list of edges belonging to the reduced state space,
-# - data structure keeping track of which vehicles traversed which roads (THIS WILL PROBABLY BE REMOVED, IT DEPENDS ON THE COST FUNCTION),
 # - data structure containing all static data related to the map,
 # - target edge of the vehicle calling this method,
 # - list of known wip areas,
 # - instance of VehicleData related to the car calling this function,
-# - data structure containing all paths (PROBABLY WILL BE DELETED, IT DEPENDS ON THE COST FUNCTION),
-# - data structure containing all agents (PROBABLY WILL BE DELETED, IT DEPENDS ON THE COST FUNCTION)
-# FOR UNISA MAP, COST FUNCTION MUST INCLUDE RELEVANCE AS 0.5 AND DISTANCE AS 100
-def compute_reward(ss,passed,mapdata,target_edge,works,vehicle,paths,agents):
+# - data structure containing all paths,
+# - data structure containing all agents
+def compute_reward(ss,mapdata,works,vehicle,paths,agents):
     worksweight = 2000 # weight to assign to wip areas
-    tailweight = 1 # weight to assign to streets leading to a wip area
     edgelist = mapdata.edgelist
     net = mapdata.net
     fullen = len(edgelist)
     r = [0]*fullen
-    # totrepeat = 0
-    # for i in ss:
-    #     if edgelist[i].getID() in passed:
-    #         totrepeat += 1
     worktolookfor = None
     checkfortail = False if edgelist[ss[0]].getID() not in paths else any(x in paths[edgelist[ss[0]].getID()][agents[vehicle.id].targetIndex] for x in works)
     target_path = paths[edgelist[ss[0]].getID()][agents[vehicle.id].targetIndex]
@@ -90,90 +80,33 @@ def compute_reward(ss,passed,mapdata,target_edge,works,vehicle,paths,agents):
         for id in veh_list:
             if id.__contains__('bus'):
                 busnum += 1
-        # path = traci.simulation.findRoute(edid,target_edge,'routerByDistance').edges
-        # path = build_path(mapdata,edid,target_edge,'e_dijkstra')
-        # path = None
-        # if edid in paths:
-        #     path = paths[edid][agents[vehicle.id].targetIndex]
-        # pathlen = 0
-        # works_in_path = 0
-        # if path is not None and len(path)!=0:
-        #     # pathlen = calculate_pathlen(path,works,mapdata)
-        #     for we in works:
-        #         if we in path:
-        #             works_in_path += worksweight
-        # else:
-        #     pathlen = math.inf
-        # if edid not in works and path is not None:
-        #     path2 = paths[edid][agents[vehicle.id].targetIndex+2]
-        #     wip2 = 0
-        #     print('in here')
-        #     if path2 is not None and len(path2)!=0:
-        #         # pathlen2 = calculate_pathlen(path2,works,mapdata)
-        #         for we in works:
-        #             if we in path2:
-        #                 wip2 += worksweight
-        #         if wip2<=works_in_path:
-        #             print('found something')
-        #             path = path2
-        #             works_in_path = wip2
-        # # print('edge '+str(edid)+' distance '+str(pathlen))
-        # traveltime = -traci.edge.getTraveltime(edid)
         # calculate density of the edge as the length of all vehicle on the edge divided by the edge length in meters
         veh_num = traci.edge.getLastStepVehicleNumber(edid)
         carnum = veh_num-busnum
         density = (5*carnum+7*busnum)/net.getEdge(edid).getLength()
         if density>1:
             density = 1
-        # road_in_wip = -(worksweight*net.getEdge(edid).getLength() if edid in works else 0)
-        # road_in_wip = -(worksweight*traci.edge.getTraveltime(edid) if edid in works else 0)
-        # road_repeat = -(70/totrepeat+100*(passed[edid]-1) if edid in passed else 0) # to avoid going on the same streets, useful for roundabouts
-        # repeat_in_path = 0 # to avoid selecting paths with already-traversed streets, useful for roundabouts and dodging signalled wip areas without going suboptimal
-        # if path is not None:
-        #     for id in passed:
-        #         if id in path:
-        #             repeat_in_path += -100
-        # tail_in_wip = 0
-        # if edid in vehicle.weightened:
-        #     tail_in_wip = -worksweight*veh_num/vehicle.weightened[edid]
         road_in_works = worksweight if edid in works else 0 # add a cost to wip areas
         # calculate cost related to density multiplied by the difference between max speed and actual speed
         lastspeed = traci.edge.getLastStepMeanSpeed(edid)
-        # roadspeed = -(net.getEdge(edid).getSpeed()-lastspeed)
         road_max_speed = traci.lane.getMaxSpeed(net.getEdge(edid).getLanes()[0].getID())
         speed_dif = road_max_speed-lastspeed
         roadspeed = 0 if speed_dif<0 else speed_dif
+        # calculate cost related to slowdown tail
         relevance = 0
         for pindex in range(4):
             if edid in paths[edgelist[ss[0]].getID()][agents[vehicle.id].targetIndex+pindex]:
                 relevance += 0.5
         if relevance == 0:
             relevance = 0.4
-        # waitingtime = -traci.edge.getWaitingTime(edid)
-        # prio = net.getEdge(edid).getPriority()
-        # r[i] = traveltime+veh_num+road_in_wip+road_repeat+tail_in_wip-pathlen-10*density+roadspeed+pred_works
-        # r[i] = 1
         checkfortail = False if edid not in paths else any(x in paths[edid][agents[vehicle.id].targetIndex] for x in works)
         worktail = 20
         path = paths[edid][agents[vehicle.id].targetIndex]
-        # if worktolookfor is not None and worktolookfor in path:
-            # worktolookfor = None
         if checkfortail and worktolookfor is not None:
             distance = 0
             weight = 1000
-            # ww = 1
-            # path = paths[edid][agents[vehicle.id].targetIndex]
-            # d = 0
             for p in path:
-                # d += 1*ww
                 distance += 1
-                # if p in works:
-                    # ww = ww/2
-                    # distance += d
-                    # d = 0
-                    # break
-                # if distance == 5:
-                #     break
                 if p == worktolookfor:
                     break
                 elif p in works:
@@ -181,63 +114,12 @@ def compute_reward(ss,passed,mapdata,target_edge,works,vehicle,paths,agents):
                     break
                 if distance >= 20:
                     break
-                # else:
-                #     if vehicle.id in passed:
-                #         if edid in passed[vehicle.id]:
-                #             break
             worktail = weight/(5 if distance<20 else 20)/(1 if relevance!=0.4 or distance <20 else 0.4)
-            # worktail = 50*distance/weight
-        # if worktail == 0 and vehicle.id in passed:
-        #     distance = 0
-        #     for p in path:
-        #         # d += 1*ww
-        #         distance += 1
-        #         # if p in works:
-        #             # ww = ww/2
-        #             # distance += d
-        #             # d = 0
-        #         #     break
-        #         # if distance == 5:
-        #         #     break
-        #         if p in passed[vehicle.id]:
-        #             break
-        #     worktail = 100/distance
-        # repeatroad = 0
-        # checkforrepeat = any(any(rep in paths[edid][agents[vehicle.id].targetIndex+rindex] for rep in passed) for rindex in range(4))
-        # if checkforrepeat:
-        #     # for rep in range(4):
-        #     path = paths[edid][agents[vehicle.id].targetIndex]
-        #     d2 = 0
-        #     for p in path:
-        #         d2 += 1
-        #         if p in passed:
-        #             break
-        #     if 200/d2 > repeatroad:
-        #         repeatroad = 200/d2
-                # repeatroad += 100/d2
         
-            # if any(x in paths[edid][agents[vehicle.id].targetIndex+pindex] for x in works):
-            # if worktolookfor in paths[edid][agents[vehicle.id].targetIndex+pindex]:
-            #     worktail -= 10
-        #     if any(x in paths[edid][agents[vehicle.id].targetIndex+pindex] for x in works):
-        #         worktail += 1
-        # worktail = worktail/4
-        # if relevance == 0:
-        #     relevance = 1
-        # repeatroad = 0 if vehicle.id not in passed else (0 if edid not in passed[vehicle.id] else 100)
-        # worktail = 0 if edid not in paths else (tailweight if any(x in paths[edid][agents[vehicle.id].targetIndex] for x in works) else 0)
         r[i] = -road_in_works-roadspeed*density-worktail # calculate and assign reward
-        # r[i] = (-worksweight if edid in works else 1)
-        # r[i] = -pathlen+roadspeed*density+repeat_in_path+road_repeat # product between speed and density to define dependency between density and car speeds
-        # r[i] = -pathlen+density+repeat_in_path+road_repeat+waitingtime # product between speed and density to define dependency between density and car speeds
-        # r[i] = 5*roadspeed*density+road_repeat+road_in_wip # product between speed and density to define dependency between density and car speeds
-        # print('reward edge '+str(edid)+': '+str(-pathlen)+' + '+str(roadspeed)+' + '+str(roadspeed*density)+str(repeat_in_path)+' + '+str(road_repeat)+str(10*waitingtime)+' = '+str(r[i]))
+        
         print('reward edge '+str(edid)+': '+str(-road_in_works)+' +(-('+str(road_max_speed)+'-'+str(lastspeed)+')*'+str(density)+'='+str(-roadspeed*density)+') + '+str(-worktail)+' = '+str(r[i]))
-        # print('reward edge '+str(edid)+': '+str(pathlen)+' + '+str(roadspeed)+' + '+str(5*roadspeed*density)+str(repeat_in_path)+' + '+str(road_repeat)+' = '+str(r[i]))
-        # r[i] = -pathlen-(1000000 if edid in works else 0)-(70/totrepeat+100*(passed[edid]-1) if edid in passed else 0)
-        # print('edge '+str(edid)+' reward '+str(r[i]))
-        # da aggiungere un aggiornamento di costo tenendo conto di comunicazione e interfacciamento con social + fiducia + nnumero di persone che twittano stessa cosa
-        # aggiungere costi su incidenti + lavori (simulazioni con stessi lavori e scenari significativi)
+        
     return np.array(r)
 
 # method to convert items of the state space array into edges, inputs are:
@@ -301,7 +183,6 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     targets = mapdata.targets
     edgelist = mapdata.edgelist
     destinations = mapdata.destinations
-    checkpoints = parse_file_for_checkpoints(str(SCENARIO)+'ScenarioData/checkpoints.txt')
     NUM_FOES = int(NUM_VEHICLES*PERC_UNI_CARS)-NUM_AGENTS
     vehs = spawnUncontrolledCars(int(NUM_FOES),mapdata) # load uncontrolled cars
     agents,end_edge = spawnControlledCars(NUM_AGENTS,mapdata,NUM_ALGS,vehs,ONLINE) # load controlled cars
@@ -323,7 +204,6 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
     signalled_works = [] # data structure to keep track of signalled wip areas
     for w in works:
         traci.edge.setParameter(w,'color',10)
-    passed = {} # data structure to keep track of which vehicles went where (THIS WILL PROBABLY BE REMOVED AFTER UPDATES TO THE COST FUNCTION)
     # create behaviour data structures
     behaviour_created = []
     behaviour_db = np.zeros((len(targets)*NUM_ALGS, len(edgelist), len(edgelist)))
@@ -435,8 +315,6 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                 vehs[vehicle].hcemission.append(vehicle_hc)
                 vehs[vehicle].noiseemission.append(vehicle_noise)
                 vehs[vehicle].traveltime += (1 if secondcounter%secondtot==0 else 0) # travel time measure by the second
-                if vehicle not in passed:
-                    passed[vehicle] = {}
                 roadid = traci.vehicle.getRoadID(vehicle)
                 if secondcounter%secondtot == 0 and not roadid.__contains__(':'): # emit random signalling of wip area
                     vehs[vehicle].currentroad = roadid
@@ -450,14 +328,6 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                     traci.vehicle.setSpeed(vehicle,net.getEdge(roadid).getSpeed()/20) # slowing cars down in wip areas
                 elif roadid not in works:
                     traci.vehicle.setSpeed(vehicle,-1)
-                if roadid in checkpoints: # checkpoints data update (THIS WILL PROBABLY BE DELETED AS IT HAS NO USE)
-                    if secondcounter%secondtot==0:
-                        checkpoints[roadid]['speed'].append(vehicle_speed)
-                        checkpoints[roadid]['flow'] += 1
-                if roadid not in passed[vehicle]:
-                    passed[vehicle][roadid] = 1
-                else:
-                    passed[vehicle][roadid] += 1
                 # if vehicle is an agent and it enters a new edge/crossing, launch the decision making step
                 if vehicle.__contains__('agent') and (vehicle not in prev_edge or vehicle in prev_edge and prev_edge[vehicle]!=roadid) and (vehicle in next_edge and next_edge[vehicle]!=end_edge[vehicle] or vehicle not in next_edge) and len(roadid)>2:
                     time1 = 0 # start counting if time measure
@@ -502,7 +372,7 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                                 prev_signalled_works = len(signalled_works)
                               
                         if len(vn)>2: # there is more than 1 valid neighbour
-                            r = compute_reward(ss,passed[vehicle],mapdata,end_edge[vehicle],works,vehs[vehicle],paths_db,agents)
+                            r = compute_reward(ss,mapdata,works,vehs[vehicle],paths_db,agents)
                             if colorreward:
                                 colorMap(r,mapdata,rewards4colors,ss_edges)
                                 for stre in edgelist:
@@ -628,34 +498,5 @@ def single_sim(NUM_VEHICLES, PERC_UNI_CARS, SHOW_GUI, T_HORIZON, STEP_SIZE, INCL
                           sum(vehs[vehicle].noxemission)
                         ))
     traci.close()
-    # gathering data from checkpoints (THIS WILL PROBABLY BE REMOVED)
-    speed_time_averages = []
-    speed_space_averages = []
-    flow_averages = []
-    for t in destinations:
-        checkpoint = None
-        for c in checkpoints:
-            if t[1] in checkpoints[c]['place']:
-                checkpoint = checkpoints[c]
-        if len(checkpoint['speed'])>0:
-            speed_time_averages.append(sum(checkpoint['speed'])/len(checkpoint['speed'])*t[2])
-            inversesum = 0
-            for sp in checkpoint['speed']:
-                if sp>0:
-                    inversesum += 1/sp
-            if inversesum>0:
-                speed_space_averages.append(len(checkpoint['speed'])/inversesum*t[2])
-                flow_averages.append(checkpoint['flow']*3600/scounter*t[2])
-    speed_tavg = sum(speed_time_averages)/100
-    speed_savg = sum(speed_space_averages)/100
-    flow_avg = sum(flow_averages)/100
-    # gathering time data of metrics of cars
-    agent_time_data = {}
-    foes_time_data = {}
-    agent_time_data['co2'] = agent_co2s
-    agent_time_data['fuel'] = agent_fuels
-    agent_time_data['noise'] = agent_noises
-    foes_time_data['co2'] = foes_co2s
-    foes_time_data['fuel'] = foes_fuels
-    foes_time_data['noise'] = foes_noises
-    return retds,NUM_AGENTS,correctlyarrived,speed_tavg,speed_savg,flow_avg,agent_time_data,foes_time_data
+    
+    return retds,NUM_AGENTS,correctlyarrived

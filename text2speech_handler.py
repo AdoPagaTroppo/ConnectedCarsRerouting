@@ -155,12 +155,6 @@ def search_next(mapdata,path):
     print('warning edge is '+str(warning_edge))
     print('prev warning edge is '+str(prev_warning_edge))
     if warning_edge is not None: # if a crossing is found
-        # if prev_warning_edge is None: # if it was the first crossing, use the one immediately after
-            # prev_warning_edge = warning_edge
-            # warning_edge = path[path.index(warning_edge)+1]
-        # prev_warning_edge = warning_edge
-        # prev_warning_edge = path[path.index(warning_edge)+1]
-        # calculate pathlen to warn about distance
         pathlen = 0
         for e in path:
             pathlen += net.getEdge(e).getLength()
